@@ -9,12 +9,7 @@ export default defineConfig({
 	plugins: [react(), tailwindcss()],
 	resolve: {
 		alias: {
-			"@app": alias("./src/app"),
-			"@entities": alias("./src/entities"),
-			"@widgets": alias("./src/widgets"),
-			"@features": alias("./src/features"),
-			"@shared": alias("./src/shared"),
-			"@pages": alias("./src/pages"),
+			"@": alias("./src"),
 		},
 	},
 });

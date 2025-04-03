@@ -1,4 +1,4 @@
-import { Avatar, Icon, Name } from "@/shared/ui";
+import { Avatar, Icon, Title } from "@/shared/ui";
 import type { FC } from "react";
 import { memo } from "react";
 import { IconWrapper } from "./ui/IconWrapper";
@@ -26,7 +26,7 @@ const MemberComponent: FC<MemberProps> = ({
 		<li className="flex items-center justify-between hover:bg-bg-tertiary cursor-pointer px-2 py-1 rounded-lg transition-colors duration-200">
 			<section className="flex items-center gap-x-2">
 				<Avatar src={avatar} alt={name} isActive={isActive} />
-				<Name>{name}</Name>
+				<Title>{name}</Title>
 			</section>
 			<ul className="flex items-center gap-x-0.5">
 				{isMuted && (

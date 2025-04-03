@@ -1,0 +1,28 @@
+:root {
+	/* Background */
+	--bg-primary: #212129;
+	--bg-secondary: #323949;
+	--bg-tertiary: #40445a;
+	/* Colors */
+	--color-primary: #ffdd21;
+	/* Text */
+	--text-primary: #fff;
+}
+
+:root[data-theme="dark"] {
+	/* Background */
+	--bg-primary: #212129;
+	--bg-secondary: #323949;
+	--bg-tertiary: #40445a;
+	/* Colors */
+	--color-primary: #ffdd21;
+	/* Text */
+	--text-primary: #fff;
+}
+
+@theme {
+	--color-bg-primary: var(--bg-primary);
+	--color-bg-secondary: var(--bg-secondary);
+	--color-text-primary: var(--text-primary);
+	--color-primary: var(--color-primary);
+}

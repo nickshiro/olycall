@@ -23,7 +23,7 @@ const MemberComponent: FC<MemberProps> = ({
 	isActive = false,
 }) => {
 	return (
-		<div className="flex items-center justify-between hover:bg-bg-quaternary cursor-pointer px-2 py-1 rounded-lg transition-colors duration-200">
+		<li className="flex items-center justify-between hover:bg-bg-tertiary cursor-pointer px-2 py-1 rounded-lg transition-colors duration-200">
 			<section className="flex items-center gap-x-2">
 				<Avatar src={avatar} alt={name} isActive={isActive} />
 				<Name>{name}</Name>
@@ -50,8 +50,8 @@ const MemberComponent: FC<MemberProps> = ({
 					</IconWrapper>
 				)}
 			</ul>
-		</div>
+		</li>
 	);
 };
 
-export const Member = memo(MemberComponent);
+export const MemberLine = memo(MemberComponent);

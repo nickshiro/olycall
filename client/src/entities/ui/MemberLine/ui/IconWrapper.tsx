@@ -6,7 +6,7 @@ export interface IconWrapperProps {
 }
 
 const IconWrapperComponent: FC<IconWrapperProps> = ({ children }) => {
-	return <div className="h-5 w-5 text-primary">{children}</div>;
+	return <li className="h-5 w-5 text-primary">{children}</li>;
 };
 
 export const IconWrapper = memo(IconWrapperComponent);

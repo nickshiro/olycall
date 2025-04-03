@@ -3,6 +3,7 @@ import type { Preview } from "@storybook/react";
 
 // Styles
 import "@/app/styles/global.css";
+import "@/shared/fonts/fonts.css";
 
 const preview: Preview = {
 	parameters: {

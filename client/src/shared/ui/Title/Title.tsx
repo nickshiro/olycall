@@ -1,11 +1,11 @@
 import type { FC } from "react";
 import { memo } from "react";
 
-export interface NameProps {
+export interface TitleProps {
 	children: string;
 }
 
-const NameComponent: FC<NameProps> = ({ children }) => {
+const TitleComponent: FC<TitleProps> = ({ children }) => {
 	return (
 		<h2 className="text-text-primary text-base font-medium selection:bg-primary selection:text-black">
 			{children}
@@ -13,4 +13,4 @@ const NameComponent: FC<NameProps> = ({ children }) => {
 	);
 };
 
-export const Name = memo(NameComponent);
+export const Title = memo(TitleComponent);

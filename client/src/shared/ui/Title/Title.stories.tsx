@@ -1,14 +1,14 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { Name } from "./Name";
+import { Title } from "./Title";
 
-const meta: Meta<typeof Name> = {
-	component: Name,
+const meta: Meta<typeof Title> = {
+	component: Title,
 	title: "Shared/Name",
 };
 
 export default meta;
-type Story = StoryObj<typeof Name>;
+type Story = StoryObj<typeof Title>;
 
 export const Default: Story = {
 	args: {

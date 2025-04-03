@@ -5,7 +5,7 @@ import { Icon } from "../Icon";
 
 const meta: Meta<typeof Button> = {
 	component: Button,
-	title: "Button",
+	title: "Shared/Button",
 };
 
 export default meta;
@@ -13,7 +13,7 @@ type Story = StoryObj<typeof Button>;
 
 export const Default: Story = {
 	args: {
-		active: false,
+		isActive: false,
 		onClick: () => {},
 		children: <Icon icon="screencast" />,
 	},

@@ -7,13 +7,14 @@ type Size = "small" | "large";
 export interface AvatarProps {
 	size?: Size;
 	src?: string;
-	active?: boolean;
+	isActive?: boolean;
+	alt?: string;
 }
 
 const AvatarComponent: FC<AvatarProps> = ({
 	size = "small",
 	src = "",
-	active = false,
+	isActive = false,
 }) => {
 	const sizes: Record<Size, string> = {
 		small: "h-10 w-10",
@@ -26,7 +27,7 @@ const AvatarComponent: FC<AvatarProps> = ({
 				style={{ backgroundImage: `url(${src})` }}
 				className="w-full h-full rounded-full bg-center bg-no-repeat bg-cover"
 			/>
-			{active && (
+			{isActive && (
 				<div className="w-full h-full rounded-full absolute top-0 left-0 box-border border-bg-secondary border-solid border outline outline-primary" />
 			)}
 		</div>

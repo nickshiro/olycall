@@ -22,14 +22,9 @@
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
 
-		"baseUrl": "src",
+		"baseUrl": ".",
 		"paths": {
-			"@app/*": ["app/*"],
-			"@entities/*": ["entities/*"],
-			"@pages/*": ["pages/*"],
-			"@widgets/*": ["widgets/*"],
-			"@features/*": ["features/*"],
-			"@shared/*": ["shared/*"]
+			"@/*": ["src/*"]
 		}
 	},
 	"include": ["src"]

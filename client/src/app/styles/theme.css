@@ -3,6 +3,7 @@
 	--bg-primary: #212129;
 	--bg-secondary: #323949;
 	--bg-tertiary: #40445a;
+	--bg-quaternary: #4c5265;
 	/* Colors */
 	--color-primary: #ffdd21;
 	/* Text */
@@ -14,6 +15,7 @@
 	--bg-primary: #212129;
 	--bg-secondary: #323949;
 	--bg-tertiary: #40445a;
+	--bg-quaternary: #4c5265;
 	/* Colors */
 	--color-primary: #ffdd21;
 	/* Text */
@@ -23,6 +25,10 @@
 @theme {
 	--color-bg-primary: var(--bg-primary);
 	--color-bg-secondary: var(--bg-secondary);
+	--color-bg-tertiary: var(--bg-tertiary);
+	--color-bg-quaternary: var(--bg-quaternary);
 	--color-text-primary: var(--text-primary);
 	--color-primary: var(--color-primary);
+	/* Font */
+	--default-font-family: "Inter", sans-serif;
 }

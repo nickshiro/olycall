@@ -4,7 +4,7 @@ import { Name } from "./Name";
 
 const meta: Meta<typeof Name> = {
 	component: Name,
-	title: "Name",
+	title: "Shared/Name",
 };
 
 export default meta;

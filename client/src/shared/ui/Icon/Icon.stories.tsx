@@ -4,7 +4,7 @@ import { Icon } from "./Icon";
 
 const meta: Meta<typeof Icon> = {
 	component: Icon,
-	title: "Icon",
+	title: "Shared/Icon",
 };
 
 export default meta;

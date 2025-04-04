@@ -1,0 +1,292 @@
+package controller
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"slices"
+	"sync"
+
+	"github.com/google/uuid"
+	"github.com/pion/rtcp"
+	"github.com/pion/rtp"
+	"github.com/pion/webrtc/v4"
+)
+
+type peerConnectionState struct {
+	peerConnection *webrtc.PeerConnection
+	conn           *threadSafeWriter
+	username       string
+}
+
+type peerConnectionStates struct {
+	mu              sync.RWMutex
+	peerConnections []peerConnectionState
+	tracks          map[string]*webrtc.TrackLocalStaticRTP
+}
+
+func (p *peerConnectionStates) AddPeer(n peerConnectionState) {
+	p.mu.Lock()
+	p.peerConnections = append(p.peerConnections, n)
+	p.mu.Unlock()
+}
+
+func (p *peerConnectionStates) AddTrack(t *webrtc.TrackRemote) (*webrtc.TrackLocalStaticRTP, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Create a new TrackLocal with the same codec as our incoming
+	trackLocal, err := webrtc.NewTrackLocalStaticRTP(t.Codec().RTPCodecCapability, t.ID(), t.StreamID())
+	if err != nil {
+		return nil, err
+	}
+
+	p.tracks[t.ID()] = trackLocal
+	return trackLocal, nil
+}
+
+// Remove from list of tracks and fire renegotation for all PeerConnections
+func (p *peerConnectionStates) RemoveTrack(t *webrtc.TrackLocalStaticRTP) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	delete(p.tracks, t.ID())
+}
+
+var peerConnections = peerConnectionStates{
+	mu:              sync.RWMutex{},
+	peerConnections: []peerConnectionState{},
+	tracks:          map[string]*webrtc.TrackLocalStaticRTP{},
+}
+
+type websocketMessage struct {
+	Event string `json:"event"`
+	Data  string `json:"data"`
+}
+
+func dispatchKeyFrame() {
+	peerConnections.mu.Lock()
+	defer peerConnections.mu.Unlock()
+
+	for _, peerConnection := range peerConnections.peerConnections {
+		for _, receiver := range peerConnection.peerConnection.GetReceivers() {
+			if receiver.Track() == nil {
+				continue
+			}
+
+			_ = peerConnection.peerConnection.WriteRTCP([]rtcp.Packet{
+				&rtcp.PictureLossIndication{
+					MediaSSRC: uint32(receiver.Track().SSRC()),
+				},
+			})
+		}
+	}
+}
+
+func signalPeerConnections() {
+	defer dispatchKeyFrame()
+
+	for i, peerConnection := range peerConnections.peerConnections {
+		if peerConnection.peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
+			peerConnections.peerConnections = slices.Delete(
+				peerConnections.peerConnections, i,
+				i+1,
+			)
+			return
+		}
+
+		// map of sender we already are seanding, so we don't double send
+		existingSenders := map[string]bool{}
+
+		for _, sender := range peerConnections.peerConnections[i].peerConnection.GetSenders() {
+			if sender.Track() == nil {
+				continue
+			}
+
+			existingSenders[sender.Track().ID()] = true
+
+			// If we have a RTPSender that doesn't map to a existing track remove and signal
+			if _, ok := peerConnections.tracks[sender.Track().ID()]; !ok {
+				if err := peerConnection.peerConnection.RemoveTrack(sender); err != nil {
+					return
+				}
+			}
+		}
+
+		// Don't receive videos we are sending, make sure we don't have loopback
+		for _, receiver := range peerConnection.peerConnection.GetReceivers() {
+			if receiver.Track() == nil {
+				continue
+			}
+
+			existingSenders[receiver.Track().ID()] = true
+		}
+
+		// Add all track we aren't sending yet to the PeerConnection
+		for trackID, track := range peerConnections.tracks {
+			if _, ok := existingSenders[trackID]; !ok {
+				if _, err := peerConnection.peerConnection.AddTrack(track); err != nil {
+					return
+				}
+			}
+		}
+
+		offer, err := peerConnection.peerConnection.CreateOffer(nil)
+		if err != nil {
+			return
+		}
+
+		if err = peerConnection.peerConnection.SetLocalDescription(offer); err != nil {
+			return
+		}
+
+		offerString, err := json.Marshal(offer)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to marshal offer to json: %v", err))
+		}
+
+		if err = peerConnection.conn.WriteJSON(&websocketMessage{
+			Event: "offer",
+			Data:  string(offerString),
+		}); err != nil {
+			return
+		}
+	}
+}
+
+func (c Controller) join(w http.ResponseWriter, r *http.Request) error {
+	// usernameCookie, err := r.Cookie("username")
+	// if err != nil {
+	// 	return err
+	// }
+
+	unsafeConn, err := c.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		return fmt.Errorf("upgrade to websocket: %w", err)
+	}
+	defer unsafeConn.Close()
+	c.logger.InfoContext(r.Context(), "connection upgraded")
+
+	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		return fmt.Errorf("create peer connection: %w", err)
+	}
+	defer peerConnection.Close()
+
+	for _, typ := range []webrtc.RTPCodecType{webrtc.RTPCodecTypeVideo, webrtc.RTPCodecTypeAudio} {
+		if _, err := peerConnection.AddTransceiverFromKind(typ, webrtc.RTPTransceiverInit{
+			Direction: webrtc.RTPTransceiverDirectionRecvonly,
+		}); err != nil {
+			return fmt.Errorf("add transceiver: %w", err)
+		}
+	}
+
+	conn := newThreadSafeWrite(unsafeConn)
+	peerConnections.AddPeer(peerConnectionState{
+		peerConnection: peerConnection,
+		conn:           conn,
+		username:       uuid.NewString(),
+	})
+
+	// Trickle ICE. Emit server candidate to client
+	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
+		}
+
+		candidateString, _ := json.Marshal(i.ToJSON())
+
+		conn.WriteJSON(&websocketMessage{
+			Event: "candidate",
+			Data:  string(candidateString),
+		})
+	})
+
+	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
+		switch p {
+		case webrtc.PeerConnectionStateFailed:
+			if err := peerConnection.Close(); err != nil {
+				// return fmt.Errorf("close peerConnection: %w", err)
+			}
+		case webrtc.PeerConnectionStateClosed:
+			signalPeerConnections()
+		}
+	})
+
+	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+		trackLocal, err := peerConnections.AddTrack(t)
+		if err != nil {
+			panic(err)
+		}
+		defer peerConnections.RemoveTrack(trackLocal)
+		dispatchKeyFrame()
+
+		buf := make([]byte, 1500)
+		rtpPkt := &rtp.Packet{}
+
+		for {
+			i, _, err := t.Read(buf)
+			if err != nil {
+				return
+			}
+
+			if err = rtpPkt.Unmarshal(buf[:i]); err != nil {
+				panic(err)
+			}
+
+			rtpPkt.Extension = false
+			rtpPkt.Extensions = nil
+
+			// slog.Info(rtpPkt.String())
+
+			if err = trackLocal.WriteRTP(rtpPkt); err != nil {
+				panic(err)
+			}
+		}
+	})
+
+	peerConnection.OnICEConnectionStateChange(func(is webrtc.ICEConnectionState) {
+		c.logger.InfoContext(r.Context(), fmt.Sprintf("ICE connection state changed: %s", is))
+	})
+
+	signalPeerConnections()
+
+	message := &websocketMessage{}
+	for {
+		_, raw, err := conn.ReadMessage()
+		if err != nil {
+			return fmt.Errorf("read message: %w", err)
+		}
+
+		// slog.Info("Got messages", string(raw))
+
+		if err := json.Unmarshal(raw, &message); err != nil {
+			return fmt.Errorf("unmarshal json to message: %w", err)
+		}
+
+		switch message.Event {
+		case "candidate":
+			candidate := webrtc.ICECandidateInit{}
+			if err := json.Unmarshal([]byte(message.Data), &candidate); err != nil {
+				return fmt.Errorf("unmarshal json to candidate: %w", err)
+			}
+
+			c.logger.Info(fmt.Sprintf("Got candidate: %v", candidate))
+
+			if err := peerConnection.AddICECandidate(candidate); err != nil {
+				return fmt.Errorf("add ICE candidate: %w", err)
+			}
+		case "answer":
+			answer := webrtc.SessionDescription{}
+			if err := json.Unmarshal([]byte(message.Data), &answer); err != nil {
+				return fmt.Errorf("unmarshal json to answer: %w", err)
+			}
+
+			if err := peerConnection.SetRemoteDescription(answer); err != nil {
+				return fmt.Errorf("set remote description: %w", err)
+			}
+		default:
+			return fmt.Errorf("unknown message: %+v", message)
+		}
+	}
+}

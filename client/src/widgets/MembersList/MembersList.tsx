@@ -9,9 +9,7 @@ const members = [
 	{ id: "534534", avatar: "//m.dedkov.space/ponasenkov", name: "Evgeny" },
 ];
 
-export interface MembersListProps {}
-
-const MembersListComponent: FC<MembersListProps> = () => {
+const MembersListComponent: FC = () => {
 	return (
 		<div className="p-2 box-border rounded-2xl bg-bg-secondary gap-y-1 flex flex-col">
 			{members.map((member) => (

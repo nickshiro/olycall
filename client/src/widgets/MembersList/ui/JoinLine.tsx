@@ -1,4 +1,4 @@
-import { Icon, Name } from "@/shared/ui";
+import { Icon, Title } from "@/shared/ui";
 import type { FC } from "react";
 import { memo } from "react";
 
@@ -12,7 +12,7 @@ const JoinLineComponent: FC = () => {
 					</div>
 				</div>
 			</div>
-			<Name>Join room</Name>
+			<Title>Join room</Title>
 		</div>
 	);
 };

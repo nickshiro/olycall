@@ -1,0 +1,139 @@
+basePath: /api
+consumes:
+- application/json
+definitions:
+  ErrorResponse:
+    properties:
+      error:
+        description: Error details
+    type: object
+  Response-service_User:
+    properties:
+      data:
+        allOf:
+        - $ref: '#/definitions/service.User'
+        description: Data
+    type: object
+  Response-string:
+    properties:
+      data:
+        description: Data
+        type: string
+    type: object
+  service.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      updatedAt:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  title: Server API
+  version: "0.1"
+paths:
+  /auth/login:
+    get:
+      parameters:
+      - description: URI to redirect to after successful login
+        in: query
+        name: redirect_uri
+        required: true
+        type: string
+      responses:
+        "302":
+          description: Redirect to Google's OAuth2 consent screen
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Endpoint that redirects to google oauth page
+      tags:
+      - Auth
+  /auth/refresh:
+    get:
+      parameters:
+      - description: Refresh token cookie (e.g., refresh_token=<token>)
+        in: header
+        name: RefresnTokenCookie
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Response-string'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Refreshes auth token pair
+      tags:
+      - Auth
+  /user/{user-id}:
+    get:
+      parameters:
+      - description: User ID (UUID)
+        format: uuid
+        in: path
+        name: user-id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Response-service_User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get user by ID
+      tags:
+      - Users
+  /user/me:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Response-service_User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get current user
+      tags:
+      - Users
+produces:
+- application/json
+swagger: "2.0"

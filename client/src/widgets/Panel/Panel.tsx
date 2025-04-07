@@ -2,10 +2,12 @@ import { memo, useState } from "react";
 import type { FC } from "react";
 
 import { Icon, Button } from "@/shared/ui";
-import { VoiceAvatar, VoiceControls, VoiceName } from "@/entities";
+import { VoiceAvatar, VoiceControls, VoiceName } from "@/entities/ui";
+
+import { JoinButton } from "./ui/JoinButton";
 
 const Panel: FC = memo(() => {
-	const [isJoined, setIsJoined] = useState<boolean>(true);
+	const [isJoined, _] = useState<boolean>(true);
 
 	return (
 		<div className="w-full rounded-2xl bg-bg-secondary p-2 flex flex-col gap-y-2">
@@ -23,13 +25,7 @@ const Panel: FC = memo(() => {
 				</div>
 			</section>
 			<hr className="text-[var(--dark-850)]" />
-			{isJoined ? (
-				<VoiceControls />
-			) : (
-				<Button className="bg-bg-tertiary hover:bg-bg-quaternary">
-					<p className="text-accent-primary text-base">Join room</p>
-				</Button>
-			)}
+			{isJoined ? <VoiceControls /> : <JoinButton />}
 		</div>
 	);
 });

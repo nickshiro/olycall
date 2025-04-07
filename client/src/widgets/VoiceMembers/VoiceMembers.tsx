@@ -1,11 +1,11 @@
 import { memo } from "react";
 import type { FC } from "react";
 
-import { VoiceMember } from "@/entities";
+import { VoiceMember } from "@/entities/ui";
 
 const VoiceMembers: FC = memo(() => {
 	return (
-		<div className="w-89.5 rounded-2xl p-2 box-border flex flex-col gap-2 bg-bg-secondary">
+		<div className="w-89.5 rounded-2xl p-2 box-border flex flex-col gap-y-1 bg-bg-secondary">
 			<VoiceMember src="//m.dedkov.space/meme/ponasenkov" />
 			<VoiceMember src="//m.dedkov.space/meme/ponasenkov" />
 			<VoiceMember src="//m.dedkov.space/meme/ponasenkov" />

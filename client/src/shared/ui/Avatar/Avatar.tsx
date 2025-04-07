@@ -5,7 +5,7 @@ import cn from "clsx";
 type Sizes = "small" | "large";
 
 export interface AvatarProps {
-	src: string;
+	src?: string;
 	size?: Sizes;
 }
 
@@ -20,7 +20,12 @@ const Avatar: FC<AvatarProps> = memo(({ src, size = "small" }) => {
 		sizeClass[size],
 	);
 
-	return <div className={classes} style={{ backgroundImage: `url(${src})` }} />;
+	return (
+		<div
+			className={classes}
+			style={{ backgroundImage: `url(${src ? src : ""})` }}
+		/>
+	);
 });
 
 export { Avatar };

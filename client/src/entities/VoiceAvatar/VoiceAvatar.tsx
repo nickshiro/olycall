@@ -13,7 +13,7 @@ const VoiceAvatar: FC<VoiceAvatarProps> = memo(({ src, isActive = false }) => {
 			{isActive && (
 				<div className="absolute w-full h-full rounded-full outline outline-accent-primary border border-bg-secondary" />
 			)}
-			<Avatar src={src ? src : ""} size="small" />
+			<Avatar src={src} size="small" />
 		</div>
 	);
 });

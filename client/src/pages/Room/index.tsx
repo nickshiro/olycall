@@ -1,56 +1,24 @@
-import { VoiceTail } from "@/entities/ui/VoiceTail/VoiceTail";
-import { Button, Icon } from "@/shared/ui";
 import { Panel, VoiceMembers } from "@/widgets";
-import type { FC } from "react";
+import { useState, type FC } from "react";
+import { TheatreMode } from "./ui/TheatreMode";
+import { TailsMode } from "./ui/TailsMode";
 
 const Room: FC = () => {
+	const [isTailsMode, setIsTailsMode] = useState<boolean>(false);
+
 	return (
-		<div className="flex h-screen items-center w-full box-border">
-			<div className="p-4 flex gap-x-2 box-border w-full">
-				<div className="w-89.5 flex flex-col justify-between">
+		<div className="flex w-full p-4 box-border h-screen flex-1">
+			<div className="flex box-border gap-x-2 m-auto w-full">
+				<div className="flex flex-col justify-between max-w-89.5 lg:w-89.5">
 					<VoiceMembers />
 					<Panel />
 				</div>
-				<div className="bg-bg-secondary p-4 rounded-2xl aspect-video w-full box-border flex flex-col justify-stretch gap-y-4">
-					<div className="">
-						<div className="flex gap-x-4">
-							<div className="w-8 h-8">
-								<Button className="bg-bg-tertiary hover:bg-bg-quaternary">
-									<div className="w-5 h-5">
-										<Icon icon="apps" />
-									</div>
-								</Button>
-							</div>
-							<div className="flex flex-1 aspect-video">
-								<div className="aspect-video w-full box-border bg-accent-primary rounded-lg" />
-							</div>
-							<div className="w-8 h-8">
-								<Button className="bg-bg-tertiary hover:bg-bg-quaternary">
-									<div className="w-5 h-5">
-										<Icon icon="expand" />
-									</div>
-								</Button>
-							</div>
-						</div>
-					</div>
-					<div className="flex gap-x-2 h-26 justify-center box-border">
-						<VoiceTail
-							className="hover:cursor-pointer"
-							src="//m.dedkov.space/meme/ponasenkov"
-						/>
-						<VoiceTail
-							className="hover:cursor-pointer"
-							src="//m.dedkov.space/meme/ponasenkov"
-						/>
-						<VoiceTail
-							className="hover:cursor-pointer"
-							src="//m.dedkov.space/meme/ponasenkov"
-						/>
-						<VoiceTail
-							className="hover:cursor-pointer"
-							src="//m.dedkov.space/meme/ponasenkov"
-						/>
-					</div>
+				<div className="bg-bg-secondary w-full max-h-full p-4 box-border rounded-2xl aspect-video">
+					{isTailsMode ? (
+						<TailsMode setTailsMode={setIsTailsMode} />
+					) : (
+						<TheatreMode setTailsMode={setIsTailsMode} />
+					)}
 				</div>
 			</div>
 		</div>

@@ -27,7 +27,7 @@ const VoiceTail: FC<VoiceTailProps> = memo(({ src = "", className }) => {
 
 	const classes = cn(
 		className,
-		"rounded-lg box-border flex items-center justify-center aspect-video h-full",
+		"rounded-lg h-full box-border flex items-center justify-center p-4 box-border h-full w-full",
 	);
 
 	return (

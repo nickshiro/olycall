@@ -16,7 +16,7 @@ const Panel: FC = memo(() => {
 					<VoiceAvatar src="//m.dedkov.space/meme/ponasenkov" isActive />
 					<VoiceName>Pavel Durov</VoiceName>
 				</div>
-				<div className="h-8 w-8">
+				<div className="h-8 w-8 ml-2">
 					<Button>
 						<div className="w-5 h-5">
 							<Icon icon="settings" />

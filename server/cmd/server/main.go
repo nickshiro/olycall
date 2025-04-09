@@ -19,6 +19,7 @@ type startCmd struct {
 	RedisPort               int    `help:"Redis port" env:"OC_SERVER_REDIS_PORT" default:"6379" json:"redis_port"`
 	RedisHost               string `help:"Redis host" env:"OC_SERVER_REDIS_HOST" default:"localhost" json:"redis_host"`
 	RedisPassword           string `help:"Redis password" env:"OC_SERVER_REDIS_PASSWORD" json:"-"`
+	RedisDB                 int    `help:"Redis database" env:"OC_SERVER_REDIS_DB" default:"0" json:"redis_db"`
 	GoogleOauth2ID          string `help:"Google OAuth2 client ID" env:"OC_SERVER_GOOGLE_OAUTH2_ID" name:"google-oauth2-id" required:"" json:"-"`                        //nolint: lll
 	GoogleOauth2Secret      string `help:"Google OAuth2 client secret" env:"OC_SERVER_GOOGLE_OAUTH2_SECRET" name:"google-oauth2-secret" required:"" json:"-"`            //nolint: lll
 	GoogleOauth2RedirectURL string `help:"Google OAuth2 redirect URL" env:"OC_SERVER_GOOGLE_OAUTH2_REDIRECT_URL" name:"google-oauth2-redirect-url" required:"" json:"-"` //nolint: lll

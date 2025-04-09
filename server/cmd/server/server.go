@@ -11,12 +11,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/oauth2"
 
-	"olycall-server/internal/controller/rest"
-	redisCache "olycall-server/internal/repository/cache/redis"
-	"olycall-server/internal/repository/domain/postgres"
-	"olycall-server/internal/service"
+	"olycall-server/internal/core/service/auth"
+	"olycall-server/internal/in/rest"
+	googleOAuthProviderHttp "olycall-server/internal/out/googleoauthprovider/http"
+	oAuthStateStoreRedis "olycall-server/internal/out/oauthstatestore/redis"
+	oAuthStorePostgres "olycall-server/internal/out/oauthstore/postgres"
+	userStorePostgres "olycall-server/internal/out/userstore/postgres"
 	"olycall-server/pkg/ctxlogger"
 	"olycall-server/pkg/redis"
 )
@@ -59,39 +60,44 @@ func run(ctx context.Context, cfg startCmd) error {
 	}
 	defer pool.Close()
 
-	domainRepo := postgres.NewRepo(pool)
-
-	redisClient, err := redis.NewRedisClient(&redis.Config{
-		Port:     cfg.RedisPort,
-		Host:     cfg.RedisHost,
-		Password: cfg.RedisPassword,
-	})
+	redisClient, err := redis.NewClient(
+		cfg.RedisHost,
+		cfg.RedisPort,
+		cfg.RedisPassword,
+		cfg.RedisDB,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create redis client: %w", err)
 	}
 	defer redisClient.Close()
 
-	cacheRepo := redisCache.NewRepo(redisClient)
+	oAuthStore := oAuthStorePostgres.NewOAuthStore(pool)
+	_ = oAuthStore // FIXME
 
-	googleOauth2Config := oauth2.Config{
-		ClientID:     cfg.GoogleOauth2ID,
-		ClientSecret: cfg.GoogleOauth2Secret,
-		RedirectURL:  cfg.GoogleOauth2RedirectURL,
-	}
+	oAuthStateStore := oAuthStateStoreRedis.NewOAuthStateStore(redisClient)
 
-	s := service.New(
-		domainRepo,
-		cacheRepo,
-		googleOauth2Config,
+	userStore := userStorePostgres.NewUserStore(pool)
+
+	googleOAuthProvider := googleOAuthProviderHttp.NewGoogleOAuthProvider(
+		cfg.GoogleOauth2ID,
+		cfg.GoogleOauth2Secret,
+		cfg.GoogleOauth2RedirectURL,
+	)
+
+	authService := auth.NewService(
+		userStore,
+		oAuthStateStore,
+		googleOAuthProvider,
 		cfg.Secret,
 	)
 
-	controller := rest.NewController(s, logger)
+	controller := rest.NewController(authService, logger)
+
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),
 		Handler:           controller.GetMux(),
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		ReadHeaderTimeout: 10 * time.Second,
 	}

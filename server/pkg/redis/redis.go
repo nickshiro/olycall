@@ -4,20 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	r "github.com/redis/go-redis/v9"
+	rc "github.com/redis/go-redis/v9"
 )
 
-type Config struct {
-	Host     string
-	Port     int
-	Password string
-}
-
-func NewRedisClient(cfg *Config) (*r.Client, error) {
-	client := r.NewClient(&r.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-		Password: cfg.Password,
-		DB:       0,
+func NewClient(
+	host string,
+	port int,
+	password string,
+	db int,
+) (*rc.Client, error) {
+	client := rc.NewClient(&rc.Options{
+		Addr:     fmt.Sprintf("%s:%d", host, port),
+		Password: password,
+		DB:       db,
 	})
 
 	if err := client.Ping(context.Background()).Err(); err != nil {

@@ -16,6 +16,6 @@ USER nonroot:nonroot
 WORKDIR /app
 
 COPY --from=builder /bin/appbin ./appbin
-COPY --from=builder /src/migrations ./migrations
+COPY --from=builder /src/migrations/domain ./migrations
 
 ENTRYPOINT ["./appbin"]

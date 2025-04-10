@@ -3,45 +3,36 @@ package rest
 import (
 	"net/http"
 
-	"olycall-server/internal/core/service/auth"
+	"olycall-server/internal/core"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 )
 
 // @Summary	Refreshes auth token pair
 // @Tags	Auth
-// @Param	RefresnTokenCookie	header		string		true	"Refresh token cookie (e.g., refresh_token=<token>)"
+// @Param	RefresnTokenCookie	header		string		true	"Refresh token cookie"
 // @Header	200					{string}	Set-Cookie	"access_token=<token>; HttpOnly; Secure; SameSite=Strict"
 // @Header	200					{string}	Set-Cookie	"refresh_token=<token>; HttpOnly; Secure; SameSite=Strict"
 // @Success	200					{object}	SuccessResponse[string]
 // @Failure	400					{object}	ErrorResponse
 // @Failure	500					{object}	ErrorResponse
 // @Router	/auth/refresh [get]
-func (c Controller) refresh(r *http.Request) handlerResponse {
-	refreshToken, err := c.getRefreshToken(r)
+func (c Controller) refresh(ctx echo.Context) error {
+	refreshToken, err := c.getRefreshToken(ctx)
 	if err != nil {
-		return handlerResponse{
-			Body:    err.Error(),
-			Status:  http.StatusBadRequest,
-			IsError: true,
-		}
+		return ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 	}
 
-	refreshTokensResp, err := c.authService.RefreshTokens(r.Context(), &auth.RefreshTokensParams{
+	refreshTokensResp, err := c.service.RefreshTokens(ctx.Request().Context(), &core.RefreshTokensParams{
 		RefreshToken: refreshToken,
 	})
 	if err != nil {
-		return c.handleError(err)
+		return c.handleError(ctx, err)
 	}
 
-	h := c.addAuthTokensPairToHeader(&http.Header{}, refreshTokensResp.AccessToken, refreshTokensResp.RefreshToken)
-
-	return handlerResponse{
-		Body:    "ok",
-		Status:  http.StatusOK,
-		IsError: false,
-		Headers: h,
-	}
+	c.addAuthTokensPairToHeader(ctx, refreshTokensResp.AccessToken, refreshTokensResp.RefreshToken)
+	return ctx.JSON(http.StatusOK, SuccessResponse[string]{Data: "ok"})
 }
 
 // @Summary	Endpoint that redirects to google oauth page
@@ -51,54 +42,41 @@ func (c Controller) refresh(r *http.Request) handlerResponse {
 // @Failure	400				{object}	ErrorResponse
 // @Failure	500				{object}	ErrorResponse
 // @Router	/auth/google [get]
-func (c Controller) google(w http.ResponseWriter, r *http.Request) {
-	redirectURI := r.URL.Query().Get("redirect_uri")
-	resp, err := c.authService.GetGoogleLoginURL(r.Context(), &auth.GetGoogleLoginURLParams{
-		RedirectURI: redirectURI,
-	})
-	if err != nil {
-		c.processHandlerResponse(r.Context(), w, c.handleError(err))
-		return
+func (c Controller) google(ctx echo.Context) error {
+	params := struct {
+		RedirectURI string `query:"redirect_uri"`
+	}{}
+	if err := ctx.Bind(&params); err != nil {
+		return ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 	}
 
-	http.Redirect(w, r, resp.URL, http.StatusFound)
+	resp, err := c.service.GetGoogleLoginURL(ctx.Request().Context(), &core.GetGoogleLoginURLParams{
+		RedirectURI: params.RedirectURI,
+	})
+	if err != nil {
+		return c.handleError(ctx, err)
+	}
+
+	return ctx.Redirect(http.StatusFound, resp.URL)
 }
 
-// @Summary	Get auth tokens with google oauth token
-// @Tags	Auth
-// @Param	RefresnTokenCookie	header		string		true	"Refresh token cookie (e.g., refresh_token=<token>)"
-// @Header	200					{string}	Set-Cookie	"access_token=<token>; HttpOnly; Secure; SameSite=Strict"
-// @Header	200					{string}	Set-Cookie	"refresh_token=<token>; HttpOnly; Secure; SameSite=Strict"
-// @Success	200					{object}	SuccessResponse[string]
-// @Failure	400					{object}	ErrorResponse
-// @Failure	500					{object}	ErrorResponse
-// @Router	/auth/google-callback [get]
-func (c Controller) googleCallback(r *http.Request) handlerResponse {
-	state := r.URL.Query().Get("state")
-
-	stateUUID, err := uuid.Parse(state)
-	if err != nil {
-		return handlerResponse{
-			Body:    err,
-			Status:  http.StatusBadRequest,
-			IsError: true,
-		}
+func (c Controller) googleCallback(ctx echo.Context) error {
+	params := struct {
+		Code  string    `query:"code" json:"code"`
+		State uuid.UUID `query:"state" json:"state"`
+	}{}
+	if err := ctx.Bind(&params); err != nil {
+		return ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 	}
 
-	resp, err := c.authService.HandleGoogleCallback(r.Context(), &auth.HandleGoogleCallbackParams{
-		Code:         r.URL.Query().Get("code"),
-		OAuthStateID: stateUUID,
+	resp, err := c.service.HandleGoogleCallback(ctx.Request().Context(), &core.HandleGoogleCallbackParams{
+		Code:         params.Code,
+		OAuthStateID: params.State,
 	})
 	if err != nil {
-		return c.handleError(err)
+		return c.handleError(ctx, err)
 	}
 
-	h := c.addAuthTokensPairToHeader(&http.Header{}, resp.AccessToken, resp.RefreshToken)
-
-	return handlerResponse{
-		Body:    "ok",
-		Status:  http.StatusOK,
-		Headers: h,
-		IsError: false,
-	}
+	c.addAuthTokensPairToHeader(ctx, resp.AccessToken, resp.RefreshToken)
+	return ctx.Redirect(http.StatusMovedPermanently, resp.RedirectURI)
 }

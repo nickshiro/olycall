@@ -16,16 +16,14 @@ func (s UserStore) CreateUser(ctx context.Context, params *userstore.CreateUserP
 		        id,
 		        email,
 		        username,
-			    created_at,
-			    updated_at
+			    created_at
 		    )
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES ($1, $2, $3, $4)
 		`,
 		params.ID,
 		params.Email,
 		params.Username,
 		params.CreatedAt,
-		params.UpdatedAt,
 	)
 
 	return s.mapError(err)
@@ -38,8 +36,7 @@ func (s UserStore) GetUserByEmail(ctx context.Context, email string) (*userstore
 		SELECT
 	        id,
 	        username,
-		    created_at,
-		    updated_at
+		    created_at
 		FROM app_user
 		WHERE email = $1
 		LIMIT 1
@@ -49,7 +46,6 @@ func (s UserStore) GetUserByEmail(ctx context.Context, email string) (*userstore
 		&resp.ID,
 		&resp.Username,
 		&resp.CreatedAt,
-		&resp.UpdatedAt,
 	)
 	if err != nil {
 		return nil, s.mapError(err)
@@ -66,8 +62,7 @@ func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.Us
 		SELECT
 	        email,
 	        username,
-		    created_at,
-		    updated_at
+		    created_at
 		FROM app_user
 		WHERE id = $1
 		LIMIT 1
@@ -77,7 +72,6 @@ func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.Us
 		&resp.Email,
 		&resp.Username,
 		&resp.CreatedAt,
-		&resp.UpdatedAt,
 	)
 	if err != nil {
 		return nil, s.mapError(err)
@@ -92,13 +86,11 @@ func (s UserStore) UpdateUser(ctx context.Context, arg *userstore.UpdateUserPara
 		`
 		UPDATE app_user
 		SET
-	        username = $2,
-		    updated_at = $3
+	        username = $2
     	WHERE id = $1
 		 `,
 		arg.ID,
 		arg.Username,
-		arg.UpdatedAt,
 	)
 	if err != nil {
 		return false, s.mapError(err)

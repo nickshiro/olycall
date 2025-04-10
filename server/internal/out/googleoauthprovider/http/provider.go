@@ -43,12 +43,12 @@ func (p GoogleOAuthProvider) GetUserInfo(
 ) (googleoauthprovider.UserInfo, error) {
 	token, err := p.exchangeCodeForToken(ctx, code)
 	if err != nil {
-		return googleoauthprovider.UserInfo{}, fmt.Errorf("exchange code for token: %w", err)
+		return googleoauthprovider.UserInfo{}, err
 	}
 
 	userInfo, err := p.getUserInfoFromToken(ctx, token.AccessToken)
 	if err != nil {
-		return googleoauthprovider.UserInfo{}, fmt.Errorf("get user info from token: %w", err)
+		return googleoauthprovider.UserInfo{}, err
 	}
 
 	return userInfo, nil

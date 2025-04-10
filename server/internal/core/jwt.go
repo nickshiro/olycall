@@ -1,4 +1,4 @@
-package auth
+package core
 
 import (
 	"errors"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type Claims struct {
@@ -17,7 +18,7 @@ type tokenPair struct {
 	RefreshToken string
 }
 
-func (s AuthService) generateJWT(userID string) tokenPair {
+func (s Service) generateJWT(userID string) tokenPair {
 	now := time.Now()
 
 	accessTokenExp := now.Add(15 * time.Minute)
@@ -41,7 +42,7 @@ func (s AuthService) generateJWT(userID string) tokenPair {
 	}
 }
 
-func (s AuthService) parseJWT(tokenString string) (*jwt.RegisteredClaims, error) {
+func (s Service) parseJWT(tokenString string) (*jwt.RegisteredClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -61,4 +62,18 @@ func (s AuthService) parseJWT(tokenString string) (*jwt.RegisteredClaims, error)
 	}
 
 	return nil, errors.New("invalid token")
+}
+
+func (s Service) getUserIDFromAccessToken(accessToken string) (uuid.UUID, error) {
+	claims, err := s.parseJWT(accessToken)
+	if err != nil {
+		return uuid.UUID{}, fmt.Errorf("parse jwt: %w", err)
+	}
+
+	parsedID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return uuid.UUID{}, fmt.Errorf("parse id: %w", err)
+	}
+
+	return parsedID, nil
 }

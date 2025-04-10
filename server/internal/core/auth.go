@@ -1,17 +1,56 @@
-package auth
+package core
 
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
+	"strings"
 	"time"
+	"unicode"
 
 	"olycall-server/internal/core/domain"
 	"olycall-server/internal/core/ports/oauthstatestore"
 	"olycall-server/internal/core/ports/userstore"
 
+	"github.com/brianvoe/gofakeit/v7"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 )
+
+func randomName() string {
+	n := [7]string{
+		gofakeit.MinecraftAnimal(),
+		gofakeit.MinecraftFood(),
+		gofakeit.MinecraftMobBoss(),
+		gofakeit.MinecraftMobHostile(),
+		gofakeit.MinecraftMobNeutral(),
+		gofakeit.MinecraftMobPassive(),
+		"User",
+	}
+
+	i := rand.IntN(len(n))
+	for strings.Contains(n[i], " ") {
+		i = (i + 1) % len(n)
+	}
+
+	u := fmt.Sprintf(
+		"%s%s%d",
+		capitalizeFirst(gofakeit.AdjectiveDescriptive()),
+		capitalizeFirst(n[i]),
+		rand.IntN(9000)+1000,
+	)
+	return u
+}
+
+func capitalizeFirst(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+	firstChar := []rune(s)[0]
+	upperFirst := string(unicode.ToUpper(firstChar))
+	restOfString := string([]rune(s)[1:])
+	return upperFirst + restOfString
+}
 
 func wrapInvalidParamsErr(err error) error {
 	return fmt.Errorf("invalid params: %w", err)
@@ -21,16 +60,16 @@ type GetGoogleLoginURLParams struct {
 	RedirectURI string
 }
 
-type GetGoogleLoginURLResponse struct {
+type GetGoogleLoginURLResp struct {
 	URL string
 }
 
 const stateTTL = time.Minute * 5
 
-func (s AuthService) GetGoogleLoginURL(
+func (s Service) GetGoogleLoginURL(
 	ctx context.Context,
 	params *GetGoogleLoginURLParams,
-) (*GetGoogleLoginURLResponse, error) {
+) (*GetGoogleLoginURLResp, error) {
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.RedirectURI, validation.Required),
 	); err != nil {
@@ -47,7 +86,7 @@ func (s AuthService) GetGoogleLoginURL(
 	}
 
 	url := s.googleOAuthProvider.GetLoginURL(ctx, stateID.String())
-	return &GetGoogleLoginURLResponse{
+	return &GetGoogleLoginURLResp{
 		URL: url,
 	}, nil
 }
@@ -57,16 +96,16 @@ type HandleGoogleCallbackParams struct {
 	OAuthStateID uuid.UUID
 }
 
-type HandleGoogleCallbackResponse struct {
+type HandleGoogleCallbackResp struct {
 	AccessToken  string
 	RefreshToken string
 	RedirectURI  string
 }
 
-func (s AuthService) HandleGoogleCallback(
+func (s Service) HandleGoogleCallback(
 	ctx context.Context,
 	params *HandleGoogleCallbackParams,
-) (*HandleGoogleCallbackResponse, error) {
+) (*HandleGoogleCallbackResp, error) {
 	if err := validation.ValidateStructWithContext(ctx, params,
 		validation.Field(&params.Code, validation.Required),
 		validation.Field(&params.OAuthStateID, validation.Required),
@@ -97,24 +136,16 @@ func (s AuthService) HandleGoogleCallback(
 	}
 
 	var userID uuid.UUID
-	if user != nil {
-		found, err := s.userStore.UpdateUser(ctx, &userstore.UpdateUserParams{
-			ID: userID,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("update user: %w", err)
-		}
-		if !found {
-			return nil, domain.ErrUserNotFound
-		}
-
-		userID = user.ID
-	} else {
+	if user == nil {
+		username := randomName()
 		userID = uuid.New()
+		now := time.Now()
+
 		if err := s.userStore.CreateUser(ctx, &userstore.CreateUserParams{
-			ID:    userID,
-			Email: userInfo.Email,
-			// Username: *userInfo.FamilyName,
+			ID:        userID,
+			Email:     userInfo.Email,
+			Username:  username,
+			CreatedAt: now,
 		}); err != nil {
 			return nil, fmt.Errorf("create user: %w", err)
 		}
@@ -122,25 +153,26 @@ func (s AuthService) HandleGoogleCallback(
 
 	tokenPair := s.generateJWT(userID.String())
 
-	return &HandleGoogleCallbackResponse{
+	return &HandleGoogleCallbackResp{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
+		RedirectURI:  oauthState.RedirectURI,
 	}, nil
 }
 
 type RefreshTokensParams struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string
 }
 
-type RefreshTokensResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+type RefreshTokensResp struct {
+	AccessToken  string
+	RefreshToken string
 }
 
-func (s AuthService) RefreshTokens(
+func (s Service) RefreshTokens(
 	_ context.Context,
 	params *RefreshTokensParams,
-) (*RefreshTokensResponse, error) {
+) (*RefreshTokensResp, error) {
 	userID, err := s.getUserIDFromAccessToken(params.RefreshToken)
 	if err != nil {
 		return nil, err
@@ -148,7 +180,7 @@ func (s AuthService) RefreshTokens(
 
 	tokenPair := s.generateJWT(userID.String())
 
-	return &RefreshTokensResponse{
+	return &RefreshTokensResp{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 	}, nil

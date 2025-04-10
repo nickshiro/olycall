@@ -1,4 +1,4 @@
-package auth
+package core
 
 import (
 	"olycall-server/internal/core/ports/googleoauthprovider"
@@ -6,7 +6,7 @@ import (
 	"olycall-server/internal/core/ports/userstore"
 )
 
-type AuthService struct {
+type Service struct {
 	userStore           userstore.UserStore
 	oauthStateStore     oauthstatestore.OAuthStateStore
 	googleOAuthProvider googleoauthprovider.GoogleOAuthProvider
@@ -18,8 +18,8 @@ func NewService(
 	oauthStateStore oauthstatestore.OAuthStateStore,
 	googleOAuthProvider googleoauthprovider.GoogleOAuthProvider,
 	secret string,
-) *AuthService {
-	return &AuthService{
+) *Service {
+	return &Service{
 		userStore:           userStore,
 		oauthStateStore:     oauthStateStore,
 		googleOAuthProvider: googleOAuthProvider,

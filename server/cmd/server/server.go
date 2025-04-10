@@ -12,14 +12,14 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"olycall-server/internal/core/service/auth"
+	"olycall-server/internal/core"
 	"olycall-server/internal/in/rest"
-	googleOAuthProviderHttp "olycall-server/internal/out/googleoauthprovider/http"
-	oAuthStateStoreRedis "olycall-server/internal/out/oauthstatestore/redis"
-	oAuthStorePostgres "olycall-server/internal/out/oauthstore/postgres"
-	userStorePostgres "olycall-server/internal/out/userstore/postgres"
 	"olycall-server/pkg/ctxlogger"
 	"olycall-server/pkg/redis"
+
+	googleOAuthProviderHttp "olycall-server/internal/out/googleoauthprovider/http"
+	oAuthStateStoreRedis "olycall-server/internal/out/oauthstatestore/redis"
+	userStorePostgres "olycall-server/internal/out/userstore/postgres"
 )
 
 //	@title		Server API
@@ -71,9 +71,6 @@ func run(ctx context.Context, cfg startCmd) error {
 	}
 	defer redisClient.Close()
 
-	oAuthStore := oAuthStorePostgres.NewOAuthStore(pool)
-	_ = oAuthStore // FIXME
-
 	oAuthStateStore := oAuthStateStoreRedis.NewOAuthStateStore(redisClient)
 
 	userStore := userStorePostgres.NewUserStore(pool)
@@ -84,14 +81,14 @@ func run(ctx context.Context, cfg startCmd) error {
 		cfg.GoogleOauth2RedirectURL,
 	)
 
-	authService := auth.NewService(
+	svc := core.NewService(
 		userStore,
 		oAuthStateStore,
 		googleOAuthProvider,
 		cfg.Secret,
 	)
 
-	controller := rest.NewController(authService, logger)
+	controller := rest.NewController(svc, logger)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),

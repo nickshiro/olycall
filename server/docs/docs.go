@@ -21,7 +21,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/login": {
+        "/auth/google": {
             "get": {
                 "tags": [
                     "Auth"
@@ -67,7 +67,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Refresh token cookie (e.g., refresh_token=\u003ctoken\u003e)",
+                        "description": "Refresh token cookie",
                         "name": "RefresnTokenCookie",
                         "in": "header",
                         "required": true
@@ -105,7 +105,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/Response-service_User"
+                            "$ref": "#/definitions/Response-domain_User"
                         }
                     },
                     "401": {
@@ -143,7 +143,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/Response-service_User"
+                            "$ref": "#/definitions/Response-domain_User"
                         }
                     },
                     "401": {
@@ -177,14 +177,14 @@ const docTemplate = `{
                 }
             }
         },
-        "Response-service_User": {
+        "Response-domain_User": {
             "type": "object",
             "properties": {
                 "data": {
                     "description": "Data",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/service.User"
+                            "$ref": "#/definitions/domain.User"
                         }
                     ]
                 }
@@ -199,10 +199,10 @@ const docTemplate = `{
                 }
             }
         },
-        "service.User": {
+        "domain.User": {
             "type": "object",
             "properties": {
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "email": {
@@ -211,7 +211,7 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "updatedAt": {
+                "updated_at": {
                     "type": "string"
                 },
                 "username": {

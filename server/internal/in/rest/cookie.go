@@ -1,8 +1,9 @@
 package rest
 
 import (
-	"fmt"
 	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -10,45 +11,40 @@ const (
 	refreshTokenCookieName = "refresh_token"
 )
 
-func (c Controller) addAuthTokensPairToHeader(h *http.Header, accessToken string, refreshToken string) *http.Header {
-	accessTokenCookie := &http.Cookie{
+func (c Controller) addAuthTokensPairToHeader(ctx echo.Context, accessToken string, refreshToken string) {
+	ctx.SetCookie(&http.Cookie{
 		Name:     accessTokenCookieName,
 		Value:    accessToken,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
-	}
+	})
 
-	refreshTokenCookie := &http.Cookie{
+	ctx.SetCookie(&http.Cookie{
 		Name:     refreshTokenCookieName,
 		Value:    refreshToken,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
-	}
-
-	// if h.isDebug {
-	// 	cookie.HttpOnly = false
-	// 	cookie.Secure = false
-	// 	cookie.SameSite = http.SameSiteNoneMode
-	// } else {
-	// 	cookie.HttpOnly = true
-	// 	cookie.Secure = true
-	// 	cookie.SameSite = http.SameSiteStrictMode
-	// }
-
-	h.Add("Set-Cookie", accessTokenCookie.String())
-	h.Add("Set-Cookie", refreshTokenCookie.String())
-	return h
+	})
 }
 
-func (c Controller) getRefreshToken(r *http.Request) (string, error) {
-	tokenCookie, err := r.Cookie(refreshTokenCookieName)
+func (c Controller) getAccessToken(ctx echo.Context) (string, error) {
+	cookie, err := ctx.Cookie(accessTokenCookieName)
 	if err != nil {
-		return "", fmt.Errorf("failed to get refresh token cookie: %w", err)
+		return "", err
 	}
 
-	return tokenCookie.Value, nil
+	return cookie.Value, nil
+}
+
+func (c Controller) getRefreshToken(ctx echo.Context) (string, error) {
+	cookie, err := ctx.Cookie(refreshTokenCookieName)
+	if err != nil {
+		return "", err
+	}
+
+	return cookie.Value, nil
 }

@@ -1,132 +1,75 @@
 package rest
 
 import (
-	"context"
-	"log/slog"
 	"net/http"
-	"strconv"
-	"time"
 
-	"olycall-server/pkg/ctxlogger"
-
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 )
 
-func (c Controller) requestIDMw(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		ctx = ctxlogger.AppendCtx(ctx, slog.String("request_id", time.Now().String()))
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+type AccessTokenCtx struct {
+	echo.Context
 }
 
-func (c Controller) requestLoggingMw(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c.logger.InfoContext(r.Context(), "request",
-			"method", r.Method,
-			"url", r.URL.String(),
-			"remote_addr", r.RemoteAddr,
-			"headers", r.Header,
-			"body", r.Body,
-		)
-		next.ServeHTTP(w, r)
-	})
+func (c *AccessTokenCtx) SetAccessToken(value string) {
+	c.Set("access-token", value)
 }
 
-const NotFoundErrMsg = "not found"
-
-type contextKey string
-
-var (
-	accessTokenCtxKey contextKey = "access-token"
-	userIDCtxKey      contextKey = "user-id"
-)
-
-func (c Controller) newIntURLParamMw(next http.Handler, key string, ctxKey contextKey) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if res := func() *int32 {
-			str := chi.URLParam(r, key)
-			if str == "" {
-				return nil
-			}
-
-			parsedi64, err := strconv.ParseInt(str, 10, 32)
-			if err != nil {
-				return nil
-			}
-
-			parsed := int32(parsedi64)
-			return &parsed
-		}(); res != nil {
-			ctx := context.WithValue(r.Context(), ctxKey, *res)
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-
-		c.processHandlerResponse(r.Context(), w, handlerResponse{
-			Body:    NotFoundErrMsg,
-			Status:  http.StatusNotFound,
-			IsError: true,
-		})
-	})
-}
-
-func (c Controller) newUUIDURLParamMw(next http.Handler, key string, ctxKey contextKey) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if res := func() *uuid.UUID {
-			str := chi.URLParam(r, key)
-			if str == "" {
-				return nil
-			}
-
-			parsed, err := uuid.Parse(str)
-			if err != nil {
-				return nil
-			}
-
-			return &parsed
-		}(); res != nil {
-			ctx := context.WithValue(r.Context(), ctxKey, *res)
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-
-		c.processHandlerResponse(r.Context(), w, handlerResponse{
-			Body:    NotFoundErrMsg,
-			Status:  http.StatusNotFound,
-			IsError: true,
-		})
-	})
-}
-
-func (c Controller) userMw(next http.Handler) http.Handler {
-	return c.newUUIDURLParamMw(next, "user-id", userIDCtxKey)
-}
-
-func (c Controller) getUserIDFromCtx(ctx context.Context) uuid.UUID {
-	value, _ := ctx.Value(userIDCtxKey).(uuid.UUID)
+func (c *AccessTokenCtx) GetAccessToken() string {
+	value, _ := c.Get("access-token").(string)
 	return value
 }
 
-func (c Controller) getAccessTokenFromCtx(ctx context.Context) string {
-	value, _ := ctx.Value(accessTokenCtxKey).(string)
+type UserIDCtx struct {
+	echo.Context
+}
+
+func (c *UserIDCtx) SetUserID(value uuid.UUID) {
+	c.Set("user-id", value)
+}
+
+func (c *UserIDCtx) GetUserID() uuid.UUID {
+	value, _ := c.Get("user-id").(uuid.UUID)
 	return value
 }
 
-func (c Controller) accessTokenMw(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accessTokenCookie, err := r.Cookie(accessTokenCookieName)
+// func (c Controller) requestLoggingMw(next echo.HandlerFunc) echo.HandlerFunc {
+// 	return func(ctx echo.Context) error {
+// 		c.logger.Info("request",
+// 			"method", ctx.Request().Method,
+// 			"url", ctx.Request().URL.String(),
+// 			"remote_addr", ctx.Request().RemoteAddr,
+// 			"headers", ctx.Request().Header,
+// 			"body", ctx.Request().Body,
+// 		)
+// 		return next(ctx)
+// 	}
+// }
+
+func (c Controller) userMw(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		uc := UserIDCtx{ctx}
+		userID := ctx.Param("user-id")
+		userUUID, err := uuid.Parse(userID)
 		if err != nil {
-			c.processHandlerResponse(r.Context(), w, handlerResponse{
-				Body:    err.Error(),
-				Status:  http.StatusUnauthorized,
-				IsError: true,
-			})
-			return
+			return ctx.JSON(http.StatusNotFound, ErrorResponse{Error: err.Error()})
 		}
 
-		ctx := context.WithValue(r.Context(), accessTokenCtxKey, accessTokenCookie.Value)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+		uc.SetUserID(userUUID)
+		return next(uc)
+	}
+}
+
+func (c Controller) accessTokenMw(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		ac := AccessTokenCtx{ctx}
+
+		accessToken, err := c.getAccessToken(ctx)
+		if err != nil {
+			return ctx.JSON(http.StatusUnauthorized, ErrorResponse{Error: err.Error()})
+		}
+
+		ac.SetAccessToken(accessToken)
+		return next(ac)
+	}
 }

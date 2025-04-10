@@ -3,20 +3,20 @@ package rest
 import (
 	"log/slog"
 
-	"olycall-server/internal/core/service/auth"
+	"olycall-server/internal/core"
 )
 
 type Controller struct {
-	authService *auth.AuthService
-	logger      *slog.Logger
+	service *core.Service
+	logger  *slog.Logger
 }
 
 func NewController(
-	authService *auth.AuthService,
+	service *core.Service,
 	logger *slog.Logger,
 ) *Controller {
 	return &Controller{
-		authService: authService,
-		logger:      logger,
+		service: service,
+		logger:  logger,
 	}
 }

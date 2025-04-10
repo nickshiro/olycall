@@ -11,7 +11,6 @@ type User struct {
 	Email     string
 	Username  string
 	CreatedAt time.Time
-	UpdatedAt time.Time
 }
 
 type CreateUserParams struct {
@@ -19,11 +18,9 @@ type CreateUserParams struct {
 	Email     string
 	Username  string
 	CreatedAt time.Time
-	UpdatedAt time.Time
 }
 
 type UpdateUserParams struct {
-	ID        uuid.UUID
-	Username  string
-	UpdatedAt time.Time
+	ID       uuid.UUID
+	Username string
 }

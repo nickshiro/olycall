@@ -2,20 +2,20 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"olycall-server/internal/core"
+	"olycall-server/internal/in/rest"
+	"olycall-server/pkg/ctxlogger"
+	"olycall-server/pkg/redis"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"olycall-server/internal/core"
-	"olycall-server/internal/in/rest"
-	"olycall-server/pkg/ctxlogger"
-	"olycall-server/pkg/redis"
 
 	googleOAuthProviderHttp "olycall-server/internal/out/googleoauthprovider/http"
 	oAuthStateStoreRedis "olycall-server/internal/out/oauthstatestore/redis"
@@ -61,6 +61,7 @@ func run(ctx context.Context, cfg startCmd) error {
 	defer pool.Close()
 
 	redisClient, err := redis.NewClient(
+		ctx,
 		cfg.RedisHost,
 		cfg.RedisPort,
 		cfg.RedisPassword,
@@ -105,9 +106,11 @@ func run(ctx context.Context, cfg startCmd) error {
 
 	// Run the server in a goroutine
 	srvErr := make(chan error, 1)
+
 	go func() {
 		logger.InfoContext(ctx, "starting server", "address", srv.Addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			srvErr <- fmt.Errorf("listen and serve: %w", err)
 		} else {
 			srvErr <- nil
@@ -125,6 +128,7 @@ func run(ctx context.Context, cfg startCmd) error {
 		if err := srv.Shutdown(ctx); err != nil {
 			return fmt.Errorf("shutdown: %w", err)
 		}
+
 		return nil
 
 	case err := <-srvErr:

@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-
 	"olycall-server/internal/core/ports/userstore"
 
 	"github.com/google/uuid"
@@ -31,7 +30,7 @@ func (s UserStore) CreateUser(ctx context.Context, params *userstore.CreateUserP
 
 func (s UserStore) GetUserByEmail(ctx context.Context, email string) (*userstore.User, error) {
 	var resp userstore.User
-	err := s.db.QueryRow(ctx,
+	if err := s.db.QueryRow(ctx,
 		`
 		SELECT
 	        id,
@@ -46,18 +45,18 @@ func (s UserStore) GetUserByEmail(ctx context.Context, email string) (*userstore
 		&resp.ID,
 		&resp.Username,
 		&resp.CreatedAt,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, s.mapError(err)
 	}
 
 	resp.Email = email
+
 	return &resp, nil
 }
 
 func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.User, error) {
 	var resp userstore.User
-	err := s.db.QueryRow(ctx,
+	if err := s.db.QueryRow(ctx,
 		`
 		SELECT
 	        email,
@@ -72,12 +71,12 @@ func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.Us
 		&resp.Email,
 		&resp.Username,
 		&resp.CreatedAt,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, s.mapError(err)
 	}
 
 	resp.ID = id
+
 	return &resp, nil
 }
 

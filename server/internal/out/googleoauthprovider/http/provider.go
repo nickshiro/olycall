@@ -3,12 +3,12 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
-
 	"olycall-server/internal/core/ports/googleoauthprovider"
+	"time"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -34,6 +34,7 @@ func NewGoogleOAuthProvider(
 		},
 		Endpoint: google.Endpoint,
 	}
+
 	return &GoogleOAuthProvider{config: config}
 }
 
@@ -59,12 +60,17 @@ func (p GoogleOAuthProvider) exchangeCodeForToken(
 	code string,
 ) (*oauth2.Token, error) {
 	options := []oauth2.AuthCodeOption{}
+
 	token, err := p.config.Exchange(ctx, code, options...)
 	if err != nil {
 		return nil, fmt.Errorf("token exchange failed: %w", err)
 	}
+
 	return token, nil
 }
+
+// TODO: move error out
+var ErrGetUserInfo = errors.New("failed to get user info")
 
 func (p GoogleOAuthProvider) getUserInfoFromToken(
 	ctx context.Context,
@@ -74,19 +80,24 @@ func (p GoogleOAuthProvider) getUserInfoFromToken(
 	if err != nil {
 		return googleoauthprovider.UserInfo{}, fmt.Errorf("create user info request: %w", err)
 	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	client := &http.Client{Timeout: 10 * time.Second}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return googleoauthprovider.UserInfo{}, fmt.Errorf("send user info request: %w", err)
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+
 		return googleoauthprovider.UserInfo{}, fmt.Errorf(
-			"get user info, status: %d, body: %s",
+			"%w: status: %d, body: %s",
+			ErrGetUserInfo,
 			resp.StatusCode,
 			body,
 		)

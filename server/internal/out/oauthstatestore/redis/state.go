@@ -1,9 +1,9 @@
+// nolint: wrapcheck
 package redis
 
 import (
 	"context"
 	"errors"
-
 	"olycall-server/internal/core/ports/oauthstatestore"
 
 	"github.com/google/uuid"
@@ -20,6 +20,7 @@ func (r OAuthStateStore) CreateOAuthState(ctx context.Context, params *oauthstat
 
 func (r OAuthStateStore) GetOAuthState(ctx context.Context, id uuid.UUID) (*oauthstatestore.OAuthState, error) {
 	stateKey := r.getStateKey(id.String())
+
 	state, err := r.rc.Get(ctx, stateKey).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {

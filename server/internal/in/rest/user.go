@@ -2,11 +2,8 @@ package rest
 
 import (
 	"net/http"
-
 	"olycall-server/internal/core"
-	"olycall-server/internal/core/domain"
-
-	"github.com/labstack/echo/v4"
+	"olycall-server/pkg/rest"
 )
 
 // @Summary	Get user by ID
@@ -17,18 +14,19 @@ import (
 // @Failure	404		{object}	ErrorResponse
 // @Failure	500		{object}	ErrorResponse
 // @Router	/user/{user-id} [get]
-func (c Controller) getUser(echoCtx echo.Context) error {
-	ctx := echoCtx.(UserIDCtx) // nolint: errcheck
+func (c Controller) getUser(r *http.Request) handlerResponse {
+	userID := c.getUserIDFromCtx(r.Context())
 
-	getUserResp, err := c.service.GetUser(ctx.Request().Context(), ctx.GetUserID())
+	getUserResp, err := c.service.GetUser(r.Context(), userID)
 	if err != nil {
-		return c.handleError(ctx, err)
+		return c.handleError(err)
 	}
 
-	return ctx.JSON(
-		http.StatusOK,
-		SuccessResponse[*domain.User]{Data: getUserResp},
-	)
+	return handlerResponse{
+		Body:    getUserResp,
+		Status:  http.StatusOK,
+		Headers: nil,
+	}
 }
 
 // @Summary	Get current user
@@ -36,19 +34,20 @@ func (c Controller) getUser(echoCtx echo.Context) error {
 // @Success	200	{object}	SuccessResponse[domain.User]
 // @Failure	401	{object}	ErrorResponse
 // @Failure	500	{object}	ErrorResponse
-// @Router	/user/getMe [get]
-func (c Controller) getMe(echoCtx echo.Context) error {
-	ctx := echoCtx.(AccessTokenCtx) // nolint: errcheck
+// @Router	/user/me [get]
+func (c Controller) getMe(r *http.Request) handlerResponse {
+	accessToken := c.getAccessTokenFromCtx(r.Context())
 
-	getUserResp, err := c.service.GetMe(ctx.Request().Context(), ctx.GetAccessToken())
+	getUserResp, err := c.service.GetMe(r.Context(), accessToken)
 	if err != nil {
-		return c.handleError(ctx, err)
+		return c.handleError(err)
 	}
 
-	return ctx.JSON(
-		http.StatusOK,
-		SuccessResponse[*domain.User]{Data: getUserResp},
-	)
+	return handlerResponse{
+		Body:    getUserResp,
+		Status:  http.StatusOK,
+		Headers: nil,
+	}
 }
 
 type putMeBody struct {
@@ -63,23 +62,29 @@ type putMeBody struct {
 // @Failure	401	{object}	ErrorResponse
 // @Failure	500	{object}	ErrorResponse
 // @Router	/user/me [put]
-func (c Controller) putMe(echoCtx echo.Context) error {
-	ctx := echoCtx.(AccessTokenCtx) // nolint: errcheck
+func (c Controller) putMe(r *http.Request) handlerResponse {
 	var body putMeBody
-	if err := ctx.Bind(&body); err != nil {
-		return err
+	if err := rest.ReadJSON(r, &body); err != nil {
+		return handlerResponse{
+			Body:    err,
+			Status:  http.StatusBadRequest,
+			Headers: nil,
+		}
 	}
 
-	getUserResp, err := c.service.UpdateMe(ctx.Request().Context(), &core.UpdateMeParams{
-		AccessToken: ctx.GetAccessToken(),
-		Username:    "",
+	accessToken := c.getAccessTokenFromCtx(r.Context())
+
+	updateMeResp, err := c.service.UpdateMe(r.Context(), &core.UpdateMeParams{
+		AccessToken: accessToken,
+		Username:    body.Username,
 	})
 	if err != nil {
-		return c.handleError(ctx, err)
+		return c.handleError(err)
 	}
 
-	return ctx.JSON(
-		http.StatusOK,
-		SuccessResponse[*domain.User]{Data: getUserResp},
-	)
+	return handlerResponse{
+		Body:    updateMeResp,
+		Status:  http.StatusOK,
+		Headers: nil,
+	}
 }

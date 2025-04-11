@@ -2,11 +2,9 @@ package rest
 
 import (
 	"net/http"
-
 	"olycall-server/internal/core"
 
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
 )
 
 // @Summary	Refreshes auth token pair
@@ -18,21 +16,24 @@ import (
 // @Failure	400					{object}	ErrorResponse
 // @Failure	500					{object}	ErrorResponse
 // @Router	/auth/refresh [get]
-func (c Controller) refresh(ctx echo.Context) error {
-	refreshToken, err := c.getRefreshToken(ctx)
-	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
-	}
+func (c Controller) refresh(r *http.Request) handlerResponse {
+	refreshToken := c.getRefreshToken(r)
 
-	refreshTokensResp, err := c.service.RefreshTokens(ctx.Request().Context(), &core.RefreshTokensParams{
+	refreshTokensResp, err := c.service.RefreshTokens(r.Context(), &core.RefreshTokensParams{
 		RefreshToken: refreshToken,
 	})
 	if err != nil {
-		return c.handleError(ctx, err)
+		return c.handleError(err)
 	}
 
-	c.addAuthTokensPairToHeader(ctx, refreshTokensResp.AccessToken, refreshTokensResp.RefreshToken)
-	return ctx.JSON(http.StatusOK, SuccessResponse[string]{Data: "ok"})
+	h := &http.Header{}
+	c.addAuthTokensPairToHeader(h, refreshTokensResp.AccessToken, refreshTokensResp.RefreshToken)
+
+	return handlerResponse{
+		Body:    "ok",
+		Status:  http.StatusOK,
+		Headers: h,
+	}
 }
 
 // @Summary	Endpoint that redirects to google oauth page
@@ -42,41 +43,48 @@ func (c Controller) refresh(ctx echo.Context) error {
 // @Failure	400				{object}	ErrorResponse
 // @Failure	500				{object}	ErrorResponse
 // @Router	/auth/google [get]
-func (c Controller) google(ctx echo.Context) error {
-	params := struct {
-		RedirectURI string `query:"redirect_uri"`
-	}{}
-	if err := ctx.Bind(&params); err != nil {
-		return ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
-	}
+func (c Controller) google(w http.ResponseWriter, r *http.Request) {
+	redirectURI := r.URL.Query().Get("redirect_uri")
 
-	resp, err := c.service.GetGoogleLoginURL(ctx.Request().Context(), &core.GetGoogleLoginURLParams{
-		RedirectURI: params.RedirectURI,
+	resp, err := c.service.GetGoogleLoginURL(r.Context(), &core.GetGoogleLoginURLParams{
+		RedirectURI: redirectURI,
 	})
 	if err != nil {
-		return c.handleError(ctx, err)
+		c.processHandlerResponse(r.Context(), w, c.handleError(err))
+
+		return
 	}
 
-	return ctx.Redirect(http.StatusFound, resp.URL)
+	http.Redirect(w, r, resp.URL, http.StatusFound)
 }
 
-func (c Controller) googleCallback(ctx echo.Context) error {
-	params := struct {
-		Code  string    `query:"code" json:"code"`
-		State uuid.UUID `query:"state" json:"state"`
-	}{}
-	if err := ctx.Bind(&params); err != nil {
-		return ctx.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+func (c Controller) googleCallback(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
+	state := r.URL.Query().Get("state")
+
+	stateUUID, err := uuid.Parse(state)
+	if err != nil {
+		c.processHandlerResponse(r.Context(), w, handlerResponse{
+			Body:    err,
+			Status:  http.StatusBadRequest,
+			Headers: nil,
+		})
+
+		return
 	}
 
-	resp, err := c.service.HandleGoogleCallback(ctx.Request().Context(), &core.HandleGoogleCallbackParams{
-		Code:         params.Code,
-		OAuthStateID: params.State,
+	resp, err := c.service.HandleGoogleCallback(r.Context(), &core.HandleGoogleCallbackParams{
+		Code:         code,
+		OAuthStateID: stateUUID,
 	})
 	if err != nil {
-		return c.handleError(ctx, err)
+		c.processHandlerResponse(r.Context(), w, c.handleError(err))
+
+		return
 	}
 
-	c.addAuthTokensPairToHeader(ctx, resp.AccessToken, resp.RefreshToken)
-	return ctx.Redirect(http.StatusMovedPermanently, resp.RedirectURI)
+	h := w.Header()
+	c.addAuthTokensPairToHeader(&h, resp.AccessToken, resp.RefreshToken)
+
+	http.Redirect(w, r, resp.RedirectURI, http.StatusMovedPermanently)
 }

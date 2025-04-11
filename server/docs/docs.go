@@ -95,7 +95,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/me": {
+        "/user/getMe": {
             "get": {
                 "tags": [
                     "Users"
@@ -106,6 +106,51 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/Response-domain_User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/me": {
+            "put": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update current user",
+                "parameters": [
+                    {
+                        "description": "Request body",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PutMeBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/Response-domain_User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "401": {
@@ -177,6 +222,17 @@ const docTemplate = `{
                 }
             }
         },
+        "PutMeBody": {
+            "type": "object",
+            "required": [
+                "username"
+            ],
+            "properties": {
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
         "Response-domain_User": {
             "type": "object",
             "properties": {
@@ -209,9 +265,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
-                    "type": "string"
-                },
-                "updated_at": {
                     "type": "string"
                 },
                 "username": {

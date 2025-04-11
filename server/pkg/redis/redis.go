@@ -8,6 +8,7 @@ import (
 )
 
 func NewClient(
+	ctx context.Context,
 	host string,
 	port int,
 	password string,
@@ -19,7 +20,7 @@ func NewClient(
 		DB:       db,
 	})
 
-	if err := client.Ping(context.Background()).Err(); err != nil {
+	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, fmt.Errorf("failed to ping: %w", err)
 	}
 

@@ -9,6 +9,17 @@ import (
 	"strings"
 )
 
+// TODO: refactor errors names
+var (
+	ErrSyntax                        = errors.New("body contains badly-formed JSON")
+	ErrUnexpectedEOF                 = errors.New("body contains badly-formed JSON")
+	ErrUnmarshalType                 = errors.New("body contains incorrect JSON type")
+	ErrEmptyBody                     = errors.New("body must not be empty")
+	ErrUnknownField                  = errors.New("body contains unknown key")
+	ErrInvalidUnmarshal              = errors.New("invalid arg passed")
+	ErrBodyMustContainOnlySingleJSON = errors.New("body must only contain a single JSON value")
+)
+
 func WriteJSON(w http.ResponseWriter, status int, body any) error {
 	jsonBytes, err := json.Marshal(body)
 	if err != nil {
@@ -17,6 +28,7 @@ func WriteJSON(w http.ResponseWriter, status int, body any) error {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
+
 	if _, err := w.Write(jsonBytes); err != nil {
 		return fmt.Errorf("failed to write response: %w", err)
 	}
@@ -24,33 +36,43 @@ func WriteJSON(w http.ResponseWriter, status int, body any) error {
 	return nil
 }
 
-func ReadJSON(r *http.Request, dst interface{}) error {
+func ReadJSON(r *http.Request, dst any) error {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 
 	err := dec.Decode(dst)
 	if err != nil {
-		var syntaxError *json.SyntaxError
-		var unmarshalTypeError *json.UnmarshalTypeError
-		var invalidUnmarshalError *json.InvalidUnmarshalError
+		var (
+			syntaxError           *json.SyntaxError
+			unmarshalTypeError    *json.UnmarshalTypeError
+			invalidUnmarshalError *json.InvalidUnmarshalError
+		)
 
 		switch {
 		case errors.As(err, &syntaxError):
-			return fmt.Errorf("body contains badly-formed JSON (at character %d)", syntaxError.Offset)
+			return fmt.Errorf("%w (at character %d)", ErrSyntax, syntaxError.Offset)
+
 		case errors.Is(err, io.ErrUnexpectedEOF):
-			return errors.New("body contains badly-formed JSON")
+			return ErrUnexpectedEOF
+
 		case errors.As(err, &unmarshalTypeError):
 			if unmarshalTypeError.Field != "" {
-				return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeError.Field)
+				return fmt.Errorf("%w for field %q", ErrUnmarshalType, unmarshalTypeError.Field)
 			}
-			return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshalTypeError.Offset)
+
+			return fmt.Errorf("%w (at character %d)", ErrUnmarshalType, unmarshalTypeError.Offset)
+
 		case errors.Is(err, io.EOF):
-			return errors.New("body must not be empty")
+			return ErrEmptyBody
+
 		case strings.HasPrefix(err.Error(), "json: unknown field "):
 			fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
-			return fmt.Errorf("body contains unknown key %s", fieldName)
+
+			return fmt.Errorf("%w %s", ErrUnknownField, fieldName)
+
 		case errors.As(err, &invalidUnmarshalError):
-			return fmt.Errorf("invalid arg passed: %w", err)
+			return fmt.Errorf("%w: %w", ErrInvalidUnmarshal, err)
+
 		default:
 			return fmt.Errorf("unknown error: %w", err)
 		}
@@ -58,7 +80,7 @@ func ReadJSON(r *http.Request, dst interface{}) error {
 
 	err = dec.Decode(&struct{}{})
 	if err != io.EOF {
-		return errors.New("body must only contain a single JSON value")
+		return ErrBodyMustContainOnlySingleJSON
 	}
 
 	return nil

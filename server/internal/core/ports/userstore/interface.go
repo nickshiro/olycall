@@ -7,8 +7,8 @@ import (
 )
 
 type UserStore interface {
-	CreateUser(context.Context, *CreateUserParams) error
-	GetUserByEmail(context.Context, string) (*User, error)
-	GetUserByID(context.Context, uuid.UUID) (*User, error)
-	UpdateUser(context.Context, *UpdateUserParams) (bool, error)
+	CreateUser(ctx context.Context, params *CreateUserParams) error
+	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*User, error)
+	UpdateUser(ctx context.Context, params *UpdateUserParams) (bool, error)
 }

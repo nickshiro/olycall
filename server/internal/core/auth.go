@@ -4,20 +4,19 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
-	"strings"
-	"time"
-	"unicode"
-
 	"olycall-server/internal/core/domain"
 	"olycall-server/internal/core/ports/oauthstatestore"
 	"olycall-server/internal/core/ports/userstore"
+	"strings"
+	"time"
+	"unicode"
 
 	"github.com/brianvoe/gofakeit/v7"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/google/uuid"
 )
 
-func randomName() string {
+func getRandomUsername() string {
 	n := [7]string{
 		gofakeit.MinecraftAnimal(),
 		gofakeit.MinecraftFood(),
@@ -28,6 +27,7 @@ func randomName() string {
 		"User",
 	}
 
+	//nolint: gosec
 	i := rand.IntN(len(n))
 	for strings.Contains(n[i], " ") {
 		i = (i + 1) % len(n)
@@ -37,8 +37,10 @@ func randomName() string {
 		"%s%s%d",
 		capitalizeFirst(gofakeit.AdjectiveDescriptive()),
 		capitalizeFirst(n[i]),
+		//nolint: gosec
 		rand.IntN(9000)+1000,
 	)
+
 	return u
 }
 
@@ -46,9 +48,11 @@ func capitalizeFirst(s string) string {
 	if len(s) == 0 {
 		return ""
 	}
+
 	firstChar := []rune(s)[0]
 	upperFirst := string(unicode.ToUpper(firstChar))
 	restOfString := string([]rune(s)[1:])
+
 	return upperFirst + restOfString
 }
 
@@ -86,6 +90,7 @@ func (s Service) GetGoogleLoginURL(
 	}
 
 	url := s.googleOAuthProvider.GetLoginURL(ctx, stateID.String())
+
 	return &GetGoogleLoginURLResp{
 		URL: url,
 	}, nil
@@ -117,6 +122,7 @@ func (s Service) HandleGoogleCallback(
 	if err != nil {
 		return nil, fmt.Errorf("get oauth state: %w", err)
 	}
+
 	if oauthState == nil {
 		return nil, domain.ErrOAuthStateNotFound
 	}
@@ -136,8 +142,9 @@ func (s Service) HandleGoogleCallback(
 	}
 
 	var userID uuid.UUID
+
 	if user == nil {
-		username := randomName()
+		username := getRandomUsername()
 		userID = uuid.New()
 		now := time.Now()
 
@@ -173,7 +180,7 @@ func (s Service) RefreshTokens(
 	_ context.Context,
 	params *RefreshTokensParams,
 ) (*RefreshTokensResp, error) {
-	userID, err := s.getUserIDFromAccessToken(params.RefreshToken)
+	userID, err := s.getUserIDFromJWT(params.RefreshToken)
 	if err != nil {
 		return nil, err
 	}

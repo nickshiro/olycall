@@ -2,7 +2,6 @@ package rest
 
 import (
 	"log/slog"
-
 	"olycall-server/internal/core"
 )
 

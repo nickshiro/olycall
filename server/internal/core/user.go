@@ -16,6 +16,7 @@ func (s Service) GetUser(ctx context.Context, userID uuid.UUID) (*domain.User, e
 	if err != nil {
 		return nil, fmt.Errorf("get user by id: %w", err)
 	}
+
 	if user == nil {
 		return nil, domain.ErrUserNotFound
 	}
@@ -29,7 +30,7 @@ func (s Service) GetUser(ctx context.Context, userID uuid.UUID) (*domain.User, e
 }
 
 func (s Service) GetMe(ctx context.Context, accessToken string) (*domain.User, error) {
-	userID, err := s.getUserIDFromAccessToken(accessToken)
+	userID, err := s.getUserIDFromJWT(accessToken)
 	if err != nil {
 		return nil, domain.ErrInvalidToken
 	}
@@ -38,6 +39,7 @@ func (s Service) GetMe(ctx context.Context, accessToken string) (*domain.User, e
 	if err != nil {
 		return nil, fmt.Errorf("get user by id: %w", err)
 	}
+
 	if user == nil {
 		return nil, domain.ErrUserNotFound
 	}
@@ -56,7 +58,7 @@ type UpdateMeParams struct {
 }
 
 func (s Service) UpdateMe(ctx context.Context, params *UpdateMeParams) (*domain.User, error) {
-	userID, err := s.getUserIDFromAccessToken(params.AccessToken)
+	userID, err := s.getUserIDFromJWT(params.AccessToken)
 	if err != nil {
 		return nil, domain.ErrInvalidToken
 	}
@@ -71,6 +73,7 @@ func (s Service) UpdateMe(ctx context.Context, params *UpdateMeParams) (*domain.
 	if err != nil {
 		return nil, fmt.Errorf("get user by id: %w", err)
 	}
+
 	if user == nil {
 		return nil, domain.ErrUserNotFound
 	}
@@ -82,6 +85,7 @@ func (s Service) UpdateMe(ctx context.Context, params *UpdateMeParams) (*domain.
 		}); err != nil {
 			return nil, fmt.Errorf("update user by id: %w", err)
 		}
+
 		user.Username = params.Username
 	}
 

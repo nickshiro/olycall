@@ -6,14 +6,19 @@ import (
 	"github.com/google/uuid"
 )
 
-func Required(value interface{}) error {
+var (
+	ErrInvalidUUID = errors.New("invalid uuid type")
+	ErrEmptyUUID   = errors.New("uuid must not be empty")
+)
+
+func Required(value any) error {
 	id, ok := value.(uuid.UUID)
 	if !ok {
-		return errors.New("invalid uuid type")
+		return ErrInvalidUUID
 	}
 
 	if id == uuid.Nil {
-		return errors.New("uuid must not be empty")
+		return ErrEmptyUUID
 	}
 
 	return nil

@@ -2,7 +2,6 @@ package pg
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -15,7 +14,7 @@ type ConflictError struct {
 }
 
 func (e ConflictError) Error() string {
-	return fmt.Sprintf("unique constraint violation on column %s", e.Column)
+	return "unique constraint violation on column " + e.Column
 }
 
 func MapError(err error) error {
@@ -34,6 +33,7 @@ func MapError(err error) error {
 			return ConflictError{
 				Column: pgErr.TableName,
 			}
+
 		default:
 			return err
 		}

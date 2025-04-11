@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"olycall-server/internal/core/domain"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -42,11 +43,14 @@ func (s Service) generateJWT(userID string) tokenPair {
 	}
 }
 
+var ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
+
 func (s Service) parseJWT(tokenString string) (*jwt.RegisteredClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf("%w: %v", ErrUnexpectedSigningMethod, token.Header["alg"])
 		}
+
 		return []byte(s.secret), nil
 	})
 	if err != nil {
@@ -55,16 +59,16 @@ func (s Service) parseJWT(tokenString string) (*jwt.RegisteredClaims, error) {
 
 	if claims, ok := token.Claims.(*jwt.RegisteredClaims); ok && token.Valid {
 		if claims.ExpiresAt.Before(time.Now()) {
-			return nil, errors.New("token expired")
+			return nil, domain.ErrTokenExpired
 		}
 
 		return claims, nil
 	}
 
-	return nil, errors.New("invalid token")
+	return nil, domain.ErrInvalidToken
 }
 
-func (s Service) getUserIDFromAccessToken(accessToken string) (uuid.UUID, error) {
+func (s Service) getUserIDFromJWT(accessToken string) (uuid.UUID, error) {
 	claims, err := s.parseJWT(accessToken)
 	if err != nil {
 		return uuid.UUID{}, fmt.Errorf("parse jwt: %w", err)

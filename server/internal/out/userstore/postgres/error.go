@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"errors"
-
 	"olycall-server/internal/core/ports/userstore"
 	"olycall-server/pkg/pg"
 )
@@ -18,6 +17,7 @@ func (s UserStore) mapError(err error) error {
 			switch conflictError.Column {
 			case "email":
 				return userstore.ErrEmailConflict
+
 			case "username":
 				return userstore.ErrUsernameConflict
 			}

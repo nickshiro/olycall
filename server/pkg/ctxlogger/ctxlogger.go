@@ -35,10 +35,12 @@ func AppendCtx(parent context.Context, attr slog.Attr) context.Context {
 
 	if v, ok := parent.Value(slogFields).([]slog.Attr); ok {
 		v = append(v, attr)
+
 		return context.WithValue(parent, slogFields, v)
 	}
 
 	v := []slog.Attr{}
 	v = append(v, attr)
+
 	return context.WithValue(parent, slogFields, v)
 }

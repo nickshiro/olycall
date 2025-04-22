@@ -115,7 +115,7 @@ func (c Controller) getAccessTokenFromCtx(ctx context.Context) string {
 
 func (c Controller) accessTokenMw(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		accessToken := c.getAccessToken(r)
+		accessToken := c.getAccessTokenFromCookie(r)
 
 		ctx := context.WithValue(r.Context(), accessTokenCtxKey, accessToken)
 		next.ServeHTTP(w, r.WithContext(ctx))

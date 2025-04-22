@@ -121,7 +121,7 @@ paths:
       summary: Get user by ID
       tags:
       - Users
-  /user/getMe:
+  /user/me:
     get:
       responses:
         "200":
@@ -139,7 +139,6 @@ paths:
       summary: Get current user
       tags:
       - Users
-  /user/me:
     put:
       parameters:
       - description: Request body

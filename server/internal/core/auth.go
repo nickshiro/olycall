@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
-	"olycall-server/internal/core/domain"
-	"olycall-server/internal/core/ports/oauthstatestore"
-	"olycall-server/internal/core/ports/userstore"
 	"strings"
 	"time"
 	"unicode"
+
+	"olycall-server/internal/core/domain"
+	"olycall-server/internal/core/ports/oauthstatestore"
+	"olycall-server/internal/core/ports/userstore"
 
 	"github.com/brianvoe/gofakeit/v7"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -136,26 +137,26 @@ func (s Service) HandleGoogleCallback(
 		return nil, fmt.Errorf("delete oauth state: %w", err)
 	}
 
-	user, err := s.userStore.GetUserByEmail(ctx, userInfo.Email)
+	userID, err := s.userStore.GetUserIDByEmail(ctx, userInfo.Email)
 	if err != nil {
 		return nil, fmt.Errorf("get user by email: %w", err)
 	}
 
-	var userID uuid.UUID
-
-	if user == nil {
+	if userID == nil {
 		username := getRandomUsername()
-		userID = uuid.New()
+		newUserID := uuid.New()
 		now := time.Now()
 
-		if err := s.userStore.CreateUser(ctx, &userstore.CreateUserParams{
-			ID:        userID,
+		if err := s.userStore.CreateUser(ctx, &userstore.User{
+			ID:        newUserID,
 			Email:     userInfo.Email,
 			Username:  username,
 			CreatedAt: now,
 		}); err != nil {
 			return nil, fmt.Errorf("create user: %w", err)
 		}
+
+		userID = &newUserID
 	}
 
 	tokenPair := s.generateJWT(userID.String())

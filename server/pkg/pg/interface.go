@@ -12,3 +12,28 @@ type Querier interface {
 	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
 }
+
+type QuerierWithTx interface {
+	Querier
+	Begin(ctx context.Context) (pgx.Tx, error)
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+}
+
+type Pg struct {
+	QuerierWithTx
+	tx pgx.Tx
+}
+
+func New(q QuerierWithTx) *Pg {
+	return &Pg{
+		QuerierWithTx: q,
+	}
+}
+
+func (p Pg) GetQuerier() Querier {
+	if p.tx != nil {
+		return p.tx
+	}
+
+	return p
+}

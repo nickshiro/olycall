@@ -6,7 +6,7 @@ type UserStore struct {
 	db pg.Querier
 }
 
-func NewUserStore(db pg.Querier) *UserStore {
+func New(db pg.Querier) *UserStore {
 	return &UserStore{
 		db: db,
 	}

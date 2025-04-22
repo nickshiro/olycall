@@ -2,10 +2,12 @@ package rest
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "olycall-server/docs"
@@ -32,11 +34,15 @@ func (c Controller) GetMux() http.Handler {
 	r.MethodNotAllowed(c.makeHandler(methodNotAllowedHandler))
 	r.NotFound(c.makeHandler(notFoundHandler))
 
+	// r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RedirectSlashes)
-	// r.Use(c.requestIDMw)
+	r.Use(middleware.RequestID)
 	// r.Use(c.requestLoggingMw)
 	r.Use(cors.AllowAll().Handler)
+	r.Use(httprate.LimitByIP(120, 1*time.Minute))
+
+	r.Use(middleware.Heartbeat("/"))
 
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
@@ -50,7 +56,7 @@ func (c Controller) GetMux() http.Handler {
 			r.Get("/google", c.google)
 			r.Get("/google-callback", c.googleCallback)
 		})
-		r.Route("/user", func(r chi.Router) {
+		r.Route("/users", func(r chi.Router) {
 			r.Route("/me", func(r chi.Router) {
 				r.Use(c.accessTokenMw)
 				r.Get("/", c.makeHandler(c.getMe))
@@ -61,8 +67,12 @@ func (c Controller) GetMux() http.Handler {
 				r.Get("/", c.makeHandler(c.getUser))
 			})
 		})
+		// r.Route("/chats", func(r chi.Router) {
+		// 	r.Use(c.accessTokenMw)
+		// })
 		r.Route("/ws", func(r chi.Router) {
-			r.Get("/primary", c.primaryWs)
+			r.Use(c.accessTokenMw)
+			r.Get("/primary", c.makeWsHandler(c.primaryWs))
 		})
 	})
 

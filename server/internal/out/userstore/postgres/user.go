@@ -2,12 +2,13 @@ package postgres
 
 import (
 	"context"
+
 	"olycall-server/internal/core/ports/userstore"
 
 	"github.com/google/uuid"
 )
 
-func (s UserStore) CreateUser(ctx context.Context, params *userstore.CreateUserParams) error {
+func (s UserStore) CreateUser(ctx context.Context, user *userstore.User) error {
 	_, err := s.db.Exec(ctx,
 		`
 		INSERT INTO
@@ -19,10 +20,10 @@ func (s UserStore) CreateUser(ctx context.Context, params *userstore.CreateUserP
 		    )
 		VALUES ($1, $2, $3, $4)
 		`,
-		params.ID,
-		params.Email,
-		params.Username,
-		params.CreatedAt,
+		user.ID,
+		user.Email,
+		user.Username,
+		user.CreatedAt,
 	)
 
 	return s.mapError(err)
@@ -52,6 +53,25 @@ func (s UserStore) GetUserByEmail(ctx context.Context, email string) (*userstore
 	resp.Email = email
 
 	return &resp, nil
+}
+
+func (s UserStore) GetUserIDByEmail(ctx context.Context, email string) (*uuid.UUID, error) {
+	var id uuid.UUID
+	if err := s.db.QueryRow(ctx,
+		`
+		SELECT id
+		FROM app_user
+		WHERE email = $1
+		LIMIT 1
+		`,
+		email,
+	).Scan(
+		&id,
+	); err != nil {
+		return nil, s.mapError(err)
+	}
+
+	return &id, nil
 }
 
 func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.User, error) {

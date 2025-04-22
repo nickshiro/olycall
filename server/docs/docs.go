@@ -95,7 +95,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/getMe": {
+        "/user/me": {
             "get": {
                 "tags": [
                     "Users"
@@ -121,9 +121,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/user/me": {
+            },
             "put": {
                 "tags": [
                     "Users"

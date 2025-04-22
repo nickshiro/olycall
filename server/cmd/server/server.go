@@ -6,18 +6,22 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"olycall-server/internal/core"
-	"olycall-server/internal/in/rest"
-	"olycall-server/pkg/ctxlogger"
-	"olycall-server/pkg/redis"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
+	"olycall-server/internal/core"
+	"olycall-server/internal/in/rest"
+	"olycall-server/pkg/ctxlogger"
+	"olycall-server/pkg/redis"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	chatStorePostgres "olycall-server/internal/out/chatstore/postgres"
+	connectionStoreInmemory "olycall-server/internal/out/connectionstore/inmemory"
 	googleOAuthProviderHttp "olycall-server/internal/out/googleoauthprovider/http"
+	notificationsProviderWebsocket "olycall-server/internal/out/notificationsprovider/websocket"
 	oAuthStateStoreRedis "olycall-server/internal/out/oauthstatestore/redis"
 	userStorePostgres "olycall-server/internal/out/userstore/postgres"
 )
@@ -74,7 +78,10 @@ func run(ctx context.Context, cfg startCmd) error {
 
 	oAuthStateStore := oAuthStateStoreRedis.NewOAuthStateStore(redisClient)
 
-	userStore := userStorePostgres.NewUserStore(pool)
+	userStore := userStorePostgres.New(pool)
+
+	chatStore := chatStorePostgres.New(pool)
+	connectionStore := connectionStoreInmemory.New()
 
 	googleOAuthProvider := googleOAuthProviderHttp.NewGoogleOAuthProvider(
 		cfg.GoogleOauth2ID,
@@ -82,14 +89,23 @@ func run(ctx context.Context, cfg startCmd) error {
 		cfg.GoogleOauth2RedirectURL,
 	)
 
+	notificationsProvider := notificationsProviderWebsocket.New()
+
 	svc := core.NewService(
 		userStore,
+		chatStore,
 		oAuthStateStore,
 		googleOAuthProvider,
+		notificationsProvider,
+		connectionStore,
 		cfg.Secret,
 	)
 
-	controller := rest.NewController(svc, logger)
+	controller := rest.NewController(
+		svc,
+		connectionStore,
+		logger,
+	)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf(":%d", cfg.Port),

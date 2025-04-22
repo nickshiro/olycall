@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"olycall-server/internal/core/ports/googleoauthprovider"
 	"time"
+
+	"olycall-server/internal/core/ports/googleoauthprovider"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"

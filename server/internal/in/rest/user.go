@@ -1,7 +1,9 @@
 package rest
 
 import (
+	"fmt"
 	"net/http"
+
 	"olycall-server/internal/core"
 	"olycall-server/pkg/rest"
 )
@@ -16,10 +18,11 @@ import (
 // @Router	/user/{user-id} [get]
 func (c Controller) getUser(r *http.Request) handlerResponse {
 	userID := c.getUserIDFromCtx(r.Context())
+	c.logger.DebugContext(r.Context(), "get user", "userid", userID)
 
 	getUserResp, err := c.service.GetUser(r.Context(), userID)
 	if err != nil {
-		return c.handleError(err)
+		return c.handleError(fmt.Errorf("get user: %w", err))
 	}
 
 	return handlerResponse{
@@ -36,11 +39,13 @@ func (c Controller) getUser(r *http.Request) handlerResponse {
 // @Failure	500	{object}	ErrorResponse
 // @Router	/user/me [get]
 func (c Controller) getMe(r *http.Request) handlerResponse {
+	c.logger.DebugContext(r.Context(), "get me")
+
 	accessToken := c.getAccessTokenFromCtx(r.Context())
 
 	getUserResp, err := c.service.GetMe(r.Context(), accessToken)
 	if err != nil {
-		return c.handleError(err)
+		return c.handleError(fmt.Errorf("get me: %w", err))
 	}
 
 	return handlerResponse{

@@ -60,7 +60,6 @@ linters:
     - nestif
     - nilerr
     - nilnesserr
-    - nlreturn
     - noctx
     # - nolintlint
     - nonamedreturns

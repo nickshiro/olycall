@@ -3,8 +3,9 @@ package core
 import (
 	"errors"
 	"fmt"
-	"olycall-server/internal/core/domain"
 	"time"
+
+	"olycall-server/internal/core/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ type tokenPair struct {
 func (s Service) generateJWT(userID string) tokenPair {
 	now := time.Now()
 
-	accessTokenExp := now.Add(15 * time.Minute)
+	accessTokenExp := now.Add(7 * 24 * time.Hour)
 	refreshTokenExp := now.Add(7 * 24 * time.Hour)
 
 	accessToken, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
@@ -80,4 +81,8 @@ func (s Service) getUserIDFromJWT(accessToken string) (uuid.UUID, error) {
 	}
 
 	return parsedID, nil
+}
+
+func (s Service) GetUserIDFromAccessToken(accessToken string) (uuid.UUID, error) {
+	return s.getUserIDFromJWT(accessToken)
 }

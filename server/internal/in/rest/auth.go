@@ -2,6 +2,7 @@ package rest
 
 import (
 	"net/http"
+
 	"olycall-server/internal/core"
 
 	"github.com/google/uuid"
@@ -17,7 +18,7 @@ import (
 // @Failure	500					{object}	ErrorResponse
 // @Router	/auth/refresh [get]
 func (c Controller) refresh(r *http.Request) handlerResponse {
-	refreshToken := c.getRefreshToken(r)
+	refreshToken := c.getRefreshTokenFromCookie(r)
 
 	refreshTokensResp, err := c.service.RefreshTokens(r.Context(), &core.RefreshTokensParams{
 		RefreshToken: refreshToken,
@@ -79,7 +80,6 @@ func (c Controller) googleCallback(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		c.processHandlerResponse(r.Context(), w, c.handleError(err))
-
 		return
 	}
 

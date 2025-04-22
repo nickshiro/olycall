@@ -13,13 +13,6 @@ type User struct {
 	CreatedAt time.Time
 }
 
-type CreateUserParams struct {
-	ID        uuid.UUID
-	Email     string
-	Username  string
-	CreatedAt time.Time
-}
-
 type UpdateUserParams struct {
 	ID       uuid.UUID
 	Username string

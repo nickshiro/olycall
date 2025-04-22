@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-s -w" -o /bin/appbin ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o /bin/appbin ./cmd/server
 
 FROM gcr.io/distroless/static:nonroot
 

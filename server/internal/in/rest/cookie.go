@@ -42,7 +42,7 @@ func (c Controller) addAuthTokensPairToHeader(h *http.Header, accessToken string
 	h.Add("Set-Cookie", refreshTokenCookie.String())
 }
 
-func (c Controller) getAccessToken(r *http.Request) string {
+func (c Controller) getAccessTokenFromCookie(r *http.Request) string {
 	cookie, err := r.Cookie(accessTokenCookieName)
 	if err != nil {
 		return ""
@@ -51,7 +51,7 @@ func (c Controller) getAccessToken(r *http.Request) string {
 	return cookie.Value
 }
 
-func (c Controller) getRefreshToken(r *http.Request) string {
+func (c Controller) getRefreshTokenFromCookie(r *http.Request) string {
 	cookie, err := r.Cookie(refreshTokenCookieName)
 	if err != nil {
 		return ""

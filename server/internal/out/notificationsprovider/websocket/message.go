@@ -14,7 +14,15 @@ func (p *NotificationsProvider) NewMessage(
 	conns []*websocket.Conn,
 	data *domain.Message,
 ) {
-	msg := gen.EmitNewMessageEvent(data)
+	msg := gen.EmitNewMessageEvent(&gen.Message{
+		ID:                 data.ID,
+		Sender:             gen.User(data.Sender),
+		CreatedAt:          data.CreatedAt,
+		UpdatedAt:          data.UpdatedAt,
+		ReplyToID:          data.ReplyToID,
+		ForwardedMessageID: data.ForwardedMessageID,
+		Content:            data.Content,
+	})
 
 	for _, conn := range conns {
 		if conn == nil {

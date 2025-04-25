@@ -3,23 +3,25 @@ package chatstore
 import (
 	"time"
 
+	"olycall-server/internal/core/domain"
+
 	"github.com/google/uuid"
 )
 
-type ChatType string
-
-const (
-	ChatTypeGroup  ChatType = "group"
-	ChatTypeDirect ChatType = "direct"
-)
-
 type Chat struct {
-	ID   uuid.UUID `json:"id"`
-	Type ChatType  `json:"type"`
+	ID   uuid.UUID       `json:"id"`
+	Type domain.ChatType `json:"type"`
+}
+
+type UserChat struct {
+	UserID uuid.UUID `json:"user_id"`
+	ChatID uuid.UUID `json:"chat_id"`
+	Pinned bool      `json:"pinned"`
+	Muted  bool      `json:"muted"`
 }
 
 type GroupChat struct {
-	ChatID      uuid.UUID `json:"id"`
+	ChatID      uuid.UUID `json:"chat_id"`
 	Name        string    `json:"name"`
 	AvatarURL   *string   `json:"avatar_url"`
 	Description *string   `json:"description"`
@@ -59,4 +61,20 @@ type File struct {
 type MessageFile struct {
 	MessageID uuid.UUID `json:"message_id"`
 	FileID    uuid.UUID `json:"file_id"`
+}
+
+type UserChatsResp struct {
+	ChatID                 uuid.UUID
+	Type                   domain.ChatType
+	Pinned                 bool
+	Muted                  bool
+	UserID                 *uuid.UUID
+	Username               *string
+	UserAvatarURL          *string
+	LastMessageID          *uuid.UUID
+	LastMessageContent     *string
+	LastMessageCreatedAt   *time.Time
+	LastMessageUpdatedAt   *time.Time
+	LastMessageReplyToID   *uuid.UUID
+	LastMessageForwardedID *uuid.UUID
 }

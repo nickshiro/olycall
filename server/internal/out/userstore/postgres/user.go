@@ -16,13 +16,17 @@ func (s UserStore) CreateUser(ctx context.Context, user *userstore.User) error {
 		        id,
 		        email,
 		        username,
+				name,
+				avatar_url,
 			    created_at
 		    )
-		VALUES ($1, $2, $3, $4)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		`,
 		user.ID,
 		user.Email,
 		user.Username,
+		user.Name,
+		user.AvatarURL,
 		user.CreatedAt,
 	)
 
@@ -36,6 +40,8 @@ func (s UserStore) GetUserByEmail(ctx context.Context, email string) (*userstore
 		SELECT
 	        id,
 	        username,
+			name,
+			avatar_url,
 		    created_at
 		FROM app_user
 		WHERE email = $1
@@ -45,6 +51,8 @@ func (s UserStore) GetUserByEmail(ctx context.Context, email string) (*userstore
 	).Scan(
 		&resp.ID,
 		&resp.Username,
+		&resp.Name,
+		&resp.AvatarURL,
 		&resp.CreatedAt,
 	); err != nil {
 		return nil, s.mapError(err)
@@ -81,6 +89,8 @@ func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.Us
 		SELECT
 	        email,
 	        username,
+			name,
+			avatar_url,
 		    created_at
 		FROM app_user
 		WHERE id = $1
@@ -90,6 +100,8 @@ func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.Us
 	).Scan(
 		&resp.Email,
 		&resp.Username,
+		&resp.Name,
+		&resp.AvatarURL,
 		&resp.CreatedAt,
 	); err != nil {
 		return nil, s.mapError(err)
@@ -98,6 +110,24 @@ func (s UserStore) GetUserByID(ctx context.Context, id uuid.UUID) (*userstore.Us
 	resp.ID = id
 
 	return &resp, nil
+}
+
+func (s UserStore) CheckUserByID(ctx context.Context, id uuid.UUID) (bool, error) {
+	var exists bool
+	if err := s.db.QueryRow(ctx,
+		`
+		SELECT EXISTS (
+			SELECT 1
+			FROM app_user
+			WHERE id = $1
+		)
+		`,
+		id,
+	).Scan(&exists); err != nil {
+		return false, s.mapError(err)
+	}
+
+	return exists, nil
 }
 
 func (s UserStore) UpdateUser(ctx context.Context, arg *userstore.UpdateUserParams) (bool, error) {
@@ -116,4 +146,45 @@ func (s UserStore) UpdateUser(ctx context.Context, arg *userstore.UpdateUserPara
 	}
 
 	return true, nil
+}
+
+func (s UserStore) SearchUsersByUsername(ctx context.Context, query string) ([]userstore.User, error) {
+	rows, err := s.db.Query(ctx,
+		`
+		SELECT 
+			id,
+			email,
+			username,
+			name,
+			avatar_url,
+			created_at
+		FROM app_user
+		WHERE username ILIKE '%' || $1 || '%' OR name ILIKE '%' || $1 || '%';
+		 `,
+		query,
+	)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+
+	var chats []userstore.User
+
+	for rows.Next() {
+		var chat userstore.User
+
+		if err := rows.Scan(
+			&chat.ID,
+			&chat.Email,
+			&chat.Username,
+			&chat.Name,
+			&chat.AvatarURL,
+			&chat.CreatedAt,
+		); err != nil {
+			return nil, s.mapError(err)
+		}
+
+		chats = append(chats, chat)
+	}
+
+	return chats, nil
 }

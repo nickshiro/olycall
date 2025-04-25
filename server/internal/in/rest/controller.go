@@ -46,6 +46,8 @@ func (c Controller) getwsmux() *typesocket.Server {
 	s := typesocket.NewServer()
 
 	gen.OnSendMessage(s, c.handleSendMessage)
+	gen.OnGetChats(s, c.handleGetChats)
+	gen.OnSearchUsers(s, c.handleSearchUsers)
 
 	return s
 }

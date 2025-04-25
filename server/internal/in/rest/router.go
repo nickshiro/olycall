@@ -59,8 +59,8 @@ func (c Controller) GetMux() http.Handler {
 		r.Route("/users", func(r chi.Router) {
 			r.Route("/me", func(r chi.Router) {
 				r.Use(c.accessTokenMw)
+				// r.Put("/", c.makeHandler(c.putMe))
 				r.Get("/", c.makeHandler(c.getMe))
-				r.Put("/", c.makeHandler(c.putMe))
 			})
 			r.Route("/{user-id}", func(r chi.Router) {
 				r.Use(c.userMw)

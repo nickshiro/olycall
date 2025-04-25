@@ -42,12 +42,31 @@ func (s Service) SendMessageToUser(
 	if chatID == nil {
 		c := uuid.New()
 		chatID = &c
+		// TODO: wrap into transaction, use deferable constraints
 
 		if err := s.chatStore.CreateChat(ctx, &chatstore.Chat{
 			ID:   c,
-			Type: chatstore.ChatTypeDirect,
+			Type: domain.ChatTypeDirect,
 		}); err != nil {
 			return domain.Message{}, fmt.Errorf("create chat: %w", err)
+		}
+
+		if err := s.chatStore.CreateUserChat(ctx, &chatstore.UserChat{
+			UserID: params.UserID,
+			ChatID: c,
+			Pinned: false,
+			Muted:  false,
+		}); err != nil {
+			return domain.Message{}, fmt.Errorf("create sender user_chat: %w", err)
+		}
+
+		if err := s.chatStore.CreateUserChat(ctx, &chatstore.UserChat{
+			UserID: params.TargetUserID,
+			ChatID: c,
+			Pinned: false,
+			Muted:  false,
+		}); err != nil {
+			return domain.Message{}, fmt.Errorf("create target user_chat: %w", err)
 		}
 
 		if err := s.chatStore.CreateDirectChat(ctx, &chatstore.DirectChat{
@@ -55,7 +74,7 @@ func (s Service) SendMessageToUser(
 			User1ID: params.UserID,
 			User2ID: params.TargetUserID,
 		}); err != nil {
-			return domain.Message{}, fmt.Errorf("create direct chat: %w", err)
+			return domain.Message{}, fmt.Errorf("create direct_chat: %w", err)
 		}
 	}
 
@@ -74,11 +93,26 @@ func (s Service) SendMessageToUser(
 
 	targetUserConns := s.connectionStore.GetConnsByUserID(params.TargetUserID)
 
+	user, err := s.userStore.GetUserByID(ctx, params.UserID)
+	if err != nil {
+		return domain.Message{}, fmt.Errorf("get user by id: %w", err)
+	}
+
+	if user == nil {
+		return domain.Message{}, domain.ErrUserNotFound
+	}
+
 	newMessage := domain.Message{
-		ID:        messageID,
-		SenderID:  params.UserID,
+		ID: messageID,
+		Sender: domain.User{
+			ID:        user.ID,
+			Username:  user.Username,
+			Name:      user.Name,
+			AvatarURL: user.AvatarURL,
+		},
 		Content:   params.Content,
 		CreatedAt: now,
+		UpdatedAt: nil,
 	}
 
 	s.notificationsProvider.NewMessage(ctx, targetUserConns, &newMessage)
@@ -86,9 +120,45 @@ func (s Service) SendMessageToUser(
 	return newMessage, nil
 }
 
-// func (s Service) GetChats(
-// 	ctx context.Context,
-// 	userID uuid.UUID,
-// ) (domain.ChatList, error) {
+func (s Service) GetChats(
+	ctx context.Context,
+	userID uuid.UUID,
+) ([]domain.Chat, error) {
+	userChatsResp, err := s.chatStore.GetUserChats(ctx, userID)
+	if err != nil {
+		return []domain.Chat{}, fmt.Errorf("get user chats: %w", err)
+	}
 
-// }
+	chats := make([]domain.Chat, len(userChatsResp))
+
+	for i, userChatResp := range userChatsResp {
+		chat := domain.Chat{
+			ID:     userChatResp.ChatID,
+			Type:   userChatResp.Type,
+			Muted:  userChatResp.Muted,
+			Pinned: userChatResp.Pinned,
+		}
+
+		if userChatResp.LastMessageID != nil {
+			chat.LastMessage = &domain.Message{
+				ID:        *userChatResp.LastMessageID,
+				CreatedAt: *userChatResp.LastMessageCreatedAt,
+				UpdatedAt: userChatResp.LastMessageUpdatedAt,
+				Content:   userChatResp.LastMessageContent,
+			}
+		}
+
+		switch userChatResp.Type {
+		case domain.ChatTypeDirect:
+			chat.Name = *userChatResp.Username
+			chat.AvatarURL = userChatResp.UserAvatarURL
+
+		default:
+			panic("unknown chat type")
+		}
+
+		chats[i] = chat
+	}
+
+	return chats, nil
+}

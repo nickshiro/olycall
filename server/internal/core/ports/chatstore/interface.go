@@ -13,8 +13,12 @@ type ChatStore interface {
 	CreateGroupChatMember(ctx context.Context, groupChatMember *GroupChatMember) error
 	// GetChatIDBy2UserIDs(ctx context.Context, user1ID uuid.UUID, user2ID uuid.UUID) (*uuid.UUID, error)
 
+	CreateUserChat(ctx context.Context, userChat *UserChat) error
+
 	CreateDirectChat(ctx context.Context, directChat *DirectChat) error
 	GetDirectChatIDBy2UsersID(ctx context.Context, user1ID uuid.UUID, user2ID uuid.UUID) (*uuid.UUID, error)
+
+	GetUserChats(ctx context.Context, userID uuid.UUID) ([]UserChatsResp, error)
 
 	CreateMessage(ctx context.Context, message *Message) error
 

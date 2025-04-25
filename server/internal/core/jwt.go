@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -83,6 +84,20 @@ func (s Service) getUserIDFromJWT(accessToken string) (uuid.UUID, error) {
 	return parsedID, nil
 }
 
-func (s Service) GetUserIDFromAccessToken(accessToken string) (uuid.UUID, error) {
-	return s.getUserIDFromJWT(accessToken)
+func (s Service) GetUserIDFromAccessToken(ctx context.Context, accessToken string) (uuid.UUID, error) {
+	userID, err := s.getUserIDFromJWT(accessToken)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	userExists, err := s.userStore.CheckUserByID(ctx, userID)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	if userExists {
+		return userID, err
+	}
+
+	return uuid.UUID{}, domain.ErrInvalidToken
 }
